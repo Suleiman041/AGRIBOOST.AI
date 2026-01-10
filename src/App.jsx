@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { supabase } from './supabase'
+import {
+  Sprout, Thermometer, MapPin, Newspaper, Zap, Menu, Plus,
+  Trash2, Edit2, Settings, CreditCard, Smartphone, Search,
+  ChevronRight, LogOut, User, Activity, AlertTriangle
+} from 'lucide-react';
 
 /* Mock Toaster Hook */
 const useNotify = () => {
@@ -406,9 +411,12 @@ const Auth = ({ setSession }) => {
 
 const Sidebar = ({ activeView, setView, isOpen, setOpen, isPro, lang, setLang, t }) => (
   <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
-    <div className="logo" style={{ marginBottom: '1rem' }}>
-      <h2 style={{ color: 'var(--primary-glow)', marginBottom: 0 }}>AgriBoost<span style={{ color: '#fff' }}>AI</span></h2>
-      <p style={{ fontSize: '0.8rem' }}>Agricultural Intelligence</p>
+    <div className="logo" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <Sprout size={28} color="var(--primary-glow)" />
+      <div>
+        <h2 style={{ color: 'var(--primary-glow)', marginBottom: 0, lineHeight: 1 }}>AgriBoost<span style={{ color: '#fff' }}>AI</span></h2>
+        <p style={{ fontSize: '0.7rem', opacity: 0.7 }}>Agricultural Intelligence</p>
+      </div>
     </div>
 
     {/* Language Switcher */}
@@ -452,22 +460,23 @@ const Sidebar = ({ activeView, setView, isOpen, setOpen, isPro, lang, setLang, t
 
     <nav className="nav-links">
       {[
-        { id: 'dashboard', label: t.dashboard, icon: '📊' },
-        { id: 'identity', label: t.location, icon: '📍' },
-        { id: 'diagnosis', label: t.scan, icon: '🌿' },
-        { id: 'market', label: t.market, icon: '📈' },
-        { id: 'advisory', label: t.advisor, icon: '💬' },
-        { id: 'ussd', label: t.ussd, icon: '📱' },
-        { id: 'settings', label: 'Settings', icon: '⚙️' },
-        { id: 'subscription', label: isPro ? t.sub : t.upgrade, icon: '⭐' },
+        { id: 'dashboard', label: t.dashboard, icon: <Activity size={18} /> },
+        { id: 'identity', label: t.location, icon: <MapPin size={18} /> },
+        { id: 'diagnosis', label: t.scan, icon: <Sprout size={18} /> },
+        { id: 'market', label: t.market, icon: <Newspaper size={18} /> },
+        { id: 'advisory', label: t.advisor, icon: <Zap size={18} /> },
+        { id: 'ussd', label: t.ussd, icon: <Smartphone size={18} /> },
+        { id: 'settings', label: 'Settings', icon: <Settings size={18} /> },
+        { id: 'subscription', label: isPro ? t.sub : t.upgrade, icon: <CreditCard size={18} /> },
       ].map(item => (
         <a
           key={item.id}
           href="#"
           className={`nav-item ${activeView === item.id ? 'active' : ''}`}
           onClick={(e) => { e.preventDefault(); setView(item.id); setOpen(false); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}
         >
-          <span>{item.icon}</span> {item.label}
+          {item.icon} {item.label}
         </a>
       ))}
     </nav>
@@ -482,48 +491,51 @@ const Sidebar = ({ activeView, setView, isOpen, setOpen, isPro, lang, setLang, t
 
 const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
   <div className="animate-fade">
-    <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <header style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
       <div>
-        <h1>{t.welcome}, {user ? user.name.split(' ')[0] : 'Farmer'}</h1>
-        <p>Real-time agricultural intelligence active.</p>
+        <h1 style={{ fontSize: '1.8rem' }}>{t.welcome}, {user ? user.name.split(' ')[0] : 'Farmer'}</h1>
+        <p style={{ opacity: 0.8 }}>Real-time agricultural intelligence active.</p>
       </div>
-      <div className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '12px' }}>
-        📍 {location.city || 'Locating...'}
+      <div className="glass" style={{ padding: '0.5rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <MapPin size={16} /> {location.city || 'Locating...'}
       </div>
     </header>
 
     {/* Classic 3-Card Grid */}
     <div className="grid">
-      <div className="glass card" onClick={() => setView('diagnosis')} style={{ cursor: 'pointer' }}>
-        <span className="icon">🌱</span>
+      <div className="glass card" onClick={() => setView('diagnosis')} style={{ cursor: 'pointer', textAlign: 'center' }}>
+        <div className="icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><Sprout size={32} color="var(--success)" /></div>
         <h3>{t.status}</h3>
-        <div className="stat-value">{t.check_health}</div>
-        <p>{t.tap_scan}</p>
+        <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>{t.check_health}</div>
+        <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>{t.tap_scan}</p>
       </div>
-      <div className="glass card">
-        <span className="icon">⛅</span>
+      <div className="glass card" style={{ textAlign: 'center' }}>
+        <div className="icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><Thermometer size={32} color="#f39c12" /></div>
         <h3>{t.weather}</h3>
-        <div className="stat-value">{weather.temp}{typeof weather.temp === 'number' ? '°C' : ''}</div>
-        <p>{weather.condition} • {weather.humidity}% Hum</p>
+        <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>{weather.temp}{typeof weather.temp === 'number' ? '°C' : ''}</div>
+        <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>{weather.condition} • {weather.humidity}% Hum</p>
       </div>
-      <div className="glass card" onClick={() => setView('identity')} style={{ cursor: 'pointer' }}>
-        <span className="icon">🛰️</span>
+      <div className="glass card" onClick={() => setView('identity')} style={{ cursor: 'pointer', textAlign: 'center' }}>
+        <div className="icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem' }}><MapPin size={32} color="#3498db" /></div>
         <h3>{t.gps}</h3>
-        <div className="stat-value">{location.lat ? 'Live Feed' : 'Waiting'}</div>
-        <p>{location.lat ? t.map_active : 'Syncing...'}</p>
+        <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>{location.lat ? 'Live Feed' : 'Waiting'}</div>
+        <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>{location.lat ? t.map_active : 'Syncing...'}</p>
       </div>
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: '2rem', marginTop: '2rem' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+      {/* Live News */}
       <div>
-        <h2>{t.news}</h2>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}><Newspaper size={20} /> {t.news}</h2>
         <div className="glass" style={{ height: '350px', padding: '1.5rem', overflowY: 'auto' }}>
           {recentActivity.map((item, i) => (
-            <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
+            <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
+              <div style={{ background: 'rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '8px' }}>
+                <AlertTriangle size={20} color="var(--secondary)" />
+              </div>
               <div>
-                <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0 }}>{item.msg}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>{item.time}</p>
+                <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0, lineHeight: 1.4 }}>{item.msg}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.3rem 0 0 0' }}>{item.time}</p>
               </div>
             </div>
           ))}
@@ -532,12 +544,12 @@ const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
 
       {/* Quick Actions / Promo Side */}
       <div>
-        <h2>{t.quick}</h2>
+        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}><Zap size={20} /> {t.quick}</h2>
         <div className="glass card" style={{ height: '350px', background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.3) 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔬</div>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}><Sprout size={48} strokeWidth={1} /></div>
           <h3>{t.soil_analysis}</h3>
           <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '2rem' }}>{t.coming_soon}</p>
-          <button className="btn btn-outline" onClick={() => setView('market')}>{t.check_prices} ➔</button>
+          <button className="btn btn-outline" onClick={() => setView('market')}>{t.check_prices} <ChevronRight size={16} /></button>
         </div>
       </div>
     </div>
@@ -1445,273 +1457,346 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
       updated_at: new Date(),
     };
 
-    try {
-      const { error } = await supabase.from('profiles').upsert(updates);
-      if (error) throw error;
+    /* Avatar Upload */
+    const [uploading, setUploading] = useState(false);
 
-      setUser({ ...user, name: username });
-      notify("Profile updated successfully!", "success");
-    } catch (error) {
-      console.error(error);
-      notify("Error updating profile", "danger");
-    } finally {
-      setLoading(false);
+    const uploadAvatar = async (event) => {
+      try {
+        setUploading(true);
+        if (!event.target.files || event.target.files.length === 0) {
+          throw new Error('You must select an image to upload.');
+        }
+
+        const file = event.target.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get Public URL
+        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        const publicUrl = data.publicUrl;
+
+        // Update Profile immediately
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, image: publicUrl, updated_at: new Date() });
+
+        if (updateError) throw updateError;
+
+        setUser(prev => ({ ...prev, image: publicUrl }));
+        notify("Profile photo updated!", "success");
+
+      } catch (error) {
+        console.error(error);
+        notify(error.message || "Error uploading image", "danger");
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    const updateProfile = async () => {
+      setLoading(true);
+      const updates = {
+        id: user.id, // Assuming user object now has ID from auth
+        full_name: username,
+        language: lang,
+        updated_at: new Date(),
+      };
+      try {
+        const { error } = await supabase.from('profiles').upsert(updates);
+        if (error) {
+          if (error.code === '42P01') {
+            throw new Error("Database Table Missing! Run the SQL script provided.");
+          }
+          throw error;
+        }
+
+        setUser({ ...user, name: username });
+        notify("Profile updated successfully!", "success");
+      } catch (error) {
+        console.error(error);
+        notify(error.message || "Error updating profile", "danger");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleSignOut = async () => {
+      await supabase.auth.signOut();
+      window.location.reload();
     }
-  };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.reload();
+    return (
+      <div className="animate-fade">
+        <h1>Settings</h1>
+        <p>Customize your experience.</p>
+
+        <div className="glass card" style={{ maxWidth: '600px', marginTop: '2rem', padding: '2rem' }}>
+          <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
+                {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>👤</span>}
+              </div>
+              {/* Edit Icon Overlay */}
+              <label htmlFor="avatar-upload" style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--primary-glow)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff' }}>
+                <Edit2 size={14} color="#000" />
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={uploadAvatar}
+                disabled={uploading}
+                style={{ display: 'none' }}
+              />
+            </div>
+            <div>
+              <h3>{user.email}</h3>
+              <div className="badge badge-outline">{uploading ? 'Uploading...' : 'Farmer Account'}</div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Display Name</label>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Language Preference</label>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
+            >
+              <option value="en">English (US)</option>
+              <option value="ha">Hausa (Nigeria)</option>
+              <option value="yo">Yoruba (Nigeria)</option>
+              <option value="ig">Igbo (Nigeria)</option>
+            </select>
+          </div>
+
+          <button onClick={updateProfile} className="btn btn-primary" disabled={loading}>
+            {loading ? 'Saving...' : 'Save Changes'}
+          </button>
+
+          <hr style={{ margin: '2rem 0', borderColor: '#444' }} />
+
+          <button onClick={handleSignOut} className="btn" style={{ background: 'var(--danger)', color: '#fff' }}>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  return (
-    <div className="animate-fade">
-      <h1>Settings</h1>
-      <p>Customize your experience.</p>
+  function App() {
+    const [view, setView] = useState('dashboard')
+    const [isMenuOpen, setMenuOpen] = useState(false)
+    const [location, setLocation] = useState({ lat: null, lon: null, city: '' })
 
-      <div className="glass card" style={{ maxWidth: '600px', marginTop: '2rem', padding: '2rem' }}>
-        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
-            {user.image ? <img src={user.image} style={{ width: '100%', height: '100%' }} /> : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>👤</span>}
-          </div>
-          <div>
-            <h3>{user.email}</h3>
-            <div className="badge badge-outline">Farmer Account</div>
-          </div>
-        </div>
+    const { notification, notify } = useNotify()
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Display Name</label>
-          <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
-          />
-        </div>
+    /* Language State */
+    const [lang, setLang] = useState(() => localStorage.getItem('agriboost_lang') || 'en');
+    useEffect(() => localStorage.setItem('agriboost_lang', lang), [lang]);
+    const t = translations[lang];
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Language Preference</label>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
-          >
-            <option value="en">English (US)</option>
-            <option value="ha">Hausa (Nigeria)</option>
-            <option value="yo">Yoruba (Nigeria)</option>
-            <option value="ig">Igbo (Nigeria)</option>
-          </select>
-        </div>
+    /* Global User State with Persistence */
+    const [user, setUser] = useState(() => {
+      const saved = localStorage.getItem('agriboost_user');
+      return saved ? JSON.parse(saved) : {
+        name: 'Guest Farmer',
+        city: 'Detecting...',
+        image: null,
+        joined: new Date().toLocaleDateString()
+      };
+    });
 
-        <button onClick={updateProfile} className="btn btn-primary" disabled={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
-        </button>
+    useEffect(() => {
+      localStorage.setItem('agriboost_user', JSON.stringify(user));
+    }, [user]);
 
-        <hr style={{ margin: '2rem 0', borderColor: '#444' }} />
+    /* Sync Pro state with User state */
+    const [isPro, setIsPro] = useState(() => {
+      return localStorage.getItem('agriboost_isPro') === 'true';
+    });
 
-        <button onClick={handleSignOut} className="btn" style={{ background: 'var(--danger)', color: '#fff' }}>
-          Sign Out
-        </button>
-      </div>
-    </div>
-  )
-}
+    useEffect(() => {
+      localStorage.setItem('agriboost_isPro', isPro);
+    }, [isPro]);
 
-function App() {
-  const [view, setView] = useState('dashboard')
-  const [isMenuOpen, setMenuOpen] = useState(false)
-  const [location, setLocation] = useState({ lat: null, lon: null, city: '' })
+    const [weather, setWeather] = useState({ temp: '--', condition: 'Fetching...', humidity: '--' })
+    const [recentActivity, setRecentActivity] = useState([
+      { msg: 'Connecting to Agri-Intelligence Network...', time: 'Just now', icon: '📡' }
+    ])
+    /* Auth Session State */
+    const [session, setSession] = useState(null)
 
-  const { notification, notify } = useNotify()
+    useEffect(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        setSession(session)
+      })
 
-  /* Language State */
-  const [lang, setLang] = useState(() => localStorage.getItem('agriboost_lang') || 'en');
-  useEffect(() => localStorage.setItem('agriboost_lang', lang), [lang]);
-  const t = translations[lang];
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setSession(session)
+      })
 
-  /* Global User State with Persistence */
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('agriboost_user');
-    return saved ? JSON.parse(saved) : {
-      name: 'Guest Farmer',
-      city: 'Detecting...',
-      image: null,
-      joined: new Date().toLocaleDateString()
-    };
-  });
+      return () => subscription.unsubscribe()
+    }, [])
 
-  useEffect(() => {
-    localStorage.setItem('agriboost_user', JSON.stringify(user));
-  }, [user]);
+    /* Load Profile on Session */
+    useEffect(() => {
+      if (session) {
+        const getProfile = async () => {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-  /* Sync Pro state with User state */
-  const [isPro, setIsPro] = useState(() => {
-    return localStorage.getItem('agriboost_isPro') === 'true';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('agriboost_isPro', isPro);
-  }, [isPro]);
-
-  const [weather, setWeather] = useState({ temp: '--', condition: 'Fetching...', humidity: '--' })
-  const [recentActivity, setRecentActivity] = useState([
-    { msg: 'Connecting to Agri-Intelligence Network...', time: 'Just now', icon: '📡' }
-  ])
-  /* Auth Session State */
-  const [session, setSession] = useState(null)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  /* Load Profile on Session */
-  useEffect(() => {
-    if (session) {
-      const getProfile = async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (data) {
-          setUser(prev => ({ ...prev, name: data.full_name || session.user.email, id: session.user.id, email: session.user.email }));
-          if (data.language) setLang(data.language);
-          if (data.is_pro) setIsPro(data.is_pro);
-        } else {
-          // Init profile if new
-          setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url }));
+          if (data) {
+            setUser(prev => ({ ...prev, name: data.full_name || session.user.email, id: session.user.id, email: session.user.email }));
+            if (data.language) setLang(data.language);
+            if (data.is_pro) setIsPro(data.is_pro);
+          } else {
+            // Init profile if new
+            setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url }));
+          }
         }
+        getProfile();
       }
-      getProfile();
-    }
-  }, [session]);
+    }, [session]);
 
 
-  // 3. AI-Powered Real-Time News Feed
-  const generateLiveInsights = async (city, weatherCond) => {
-    if (!GROQ_API_KEY || !city || city === 'Detecting...') return;
+    // 3. AI-Powered Real-Time News Feed
+    const generateLiveInsights = async (city, weatherCond) => {
+      if (!GROQ_API_KEY || !city || city === 'Detecting...') return;
 
-    try {
-      const prompt = `Generate 3 short, urgent, real-time agricultural alerts or market news headlines specifically for a farmer in ${city}, Nigeria, given the current weather is "${weatherCond}". 
+      try {
+        const prompt = `Generate 3 short, urgent, real-time agricultural alerts or market news headlines specifically for a farmer in ${city}, Nigeria, given the current weather is "${weatherCond}". 
       Make them sound like live news ticker items. 
       Return ONLY valid JSON array of objects: [{"msg": "headline text", "icon": "emoji like 🌧️, 📉, 🦠, 🚜"}]
       Translate the headlines to ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.`;
 
-      const response = await callGroqAI(prompt);
-      // Clean JSON string (handle backticks)
-      const cleanJson = response.replace(/```json|```/g, '').trim();
-      const insights = JSON.parse(cleanJson);
+        const response = await callGroqAI(prompt);
+        // Clean JSON string (handle backticks)
+        const cleanJson = response.replace(/```json|```/g, '').trim();
+        const insights = JSON.parse(cleanJson);
 
-      // Add timestamps
-      const taggedInsights = insights.map(item => ({
-        ...item,
-        time: 'Live Feed'
-      }));
+        // Add timestamps
+        const taggedInsights = insights.map(item => ({
+          ...item,
+          time: 'Live Feed'
+        }));
 
-      setRecentActivity(taggedInsights);
-    } catch (e) {
-      console.error("News gen failed", e);
-    }
-  };
+        setRecentActivity(taggedInsights);
+      } catch (e) {
+        console.error("News gen failed", e);
+      }
+    };
 
-  useEffect(() => {
-    /* REAL GEOLOCATION & WEATHER & CITY */
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setLocation(prev => ({ ...prev, lat: latitude, lon: longitude }));
+    useEffect(() => {
+      /* REAL GEOLOCATION & WEATHER & CITY */
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setLocation(prev => ({ ...prev, lat: latitude, lon: longitude }));
 
-        // 1. Fetch Real Weather (Open-Meteo Free API)
-        let currentCondition = 'Clear';
-        try {
-          const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code`);
-          const weatherData = await weatherRes.json();
-          const w = weatherData.current;
+          // 1. Fetch Real Weather (Open-Meteo Free API)
+          let currentCondition = 'Clear';
+          try {
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code`);
+            const weatherData = await weatherRes.json();
+            const w = weatherData.current;
 
-          // Map WMO codes to text/icons
-          const getWeatherLabel = (code) => {
-            if (code === 0) return "Clear Sky";
-            if (code < 4) return "Partly Cloudy";
-            if (code < 50) return "Foggy";
-            if (code < 80) return "Rainy";
-            return "Thunderstorm";
-          }
-          currentCondition = getWeatherLabel(w.weather_code);
+            // Map WMO codes to text/icons
+            const getWeatherLabel = (code) => {
+              if (code === 0) return "Clear Sky";
+              if (code < 4) return "Partly Cloudy";
+              if (code < 50) return "Foggy";
+              if (code < 80) return "Rainy";
+              return "Thunderstorm";
+            }
+            currentCondition = getWeatherLabel(w.weather_code);
 
-          setWeather({
-            temp: w.temperature_2m,
-            humidity: w.relative_humidity_2m,
-            condition: currentCondition
-          });
-        } catch (e) {
-          console.error("Weather fetch failed", e);
-        }
-
-        // 2. Real Reverse Geocoding (BigDataCloud Free API)
-        try {
-          const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
-          const geoData = await geoRes.json();
-          const city = geoData.city || geoData.locality || "Nigeria";
-
-          setLocation(prev => ({ ...prev, city }));
-
-          // Update user city if it was default
-          if (user.city === 'Detecting...' || user.city === 'Kaduna') {
-            setUser(prev => ({ ...prev, city }));
+            setWeather({
+              temp: w.temperature_2m,
+              humidity: w.relative_humidity_2m,
+              condition: currentCondition
+            });
+          } catch (e) {
+            console.error("Weather fetch failed", e);
           }
 
-          // Trigger AI News Generation
-          generateLiveInsights(city, currentCondition);
+          // 2. Real Reverse Geocoding (BigDataCloud Free API)
+          try {
+            const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+            const geoData = await geoRes.json();
+            const city = geoData.city || geoData.locality || "Nigeria";
 
-        } catch (e) {
-          console.error("Geocoding failed", e);
-        }
-      });
-    }
-  }, [lang]); // Re-fetch news when lang changes
+            setLocation(prev => ({ ...prev, city }));
 
-  return (
-    <div className="app-container">
-      {notification && <Notification data={notification} />}
-      {!session ? (
-        <Auth setSession={setSession} />
-      ) : (
-        <>
-          <Sidebar activeView={view} setView={setView} isOpen={isMenuOpen} setOpen={setMenuOpen} isPro={isPro} lang={lang} setLang={setLang} t={t} />
+            // Update user city if it was default
+            if (user.city === 'Detecting...' || user.city === 'Kaduna') {
+              setUser(prev => ({ ...prev, city }));
+            }
 
-          <main className="main-content">
-            <header className="mobile-header">
-              <button className="menu-btn" onClick={() => setMenuOpen(!isMenuOpen)}>☰</button>
-              <h2>{lang === 'ha' ? 'Noma' : lang === 'yo' ? 'Ogbin' : lang === 'ig' ? 'Ubi' : 'Agri'}Boost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
-              <div className="user-avatar" onClick={() => setView('settings')} style={{ cursor: 'pointer' }}>
-                {user.image ? <img src={user.image} style={{ width: '100%', height: '100%' }} /> : '👤'}
-              </div>
-            </header>
+            // Trigger AI News Generation
+            generateLiveInsights(city, currentCondition);
 
-            {view === 'dashboard' && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
-            {view === 'identity' && <FarmerIdentity isPro={isPro} location={location} setLocation={setLocation} user={user} setUser={setUser} t={t} />}
-            {view === 'diagnosis' && <Diagnosis setView={setView} notify={notify} t={t} lang={lang} />}
-            {view === 'market' && <MarketPrices t={t} />}
-            {view === 'advisory' && <AIAdvisor location={location} t={t} lang={lang} />}
-            {view === 'ussd' && <USSDPreview location={location} t={t} />}
-            {view === 'settings' && <Settings user={user} setUser={setUser} t={t} lang={lang} setLang={setLang} notify={notify} />}
-            {view === 'subscription' && <Subscription isPro={isPro} setIsPro={setIsPro} notify={notify} t={t} />}
-          </main>
-        </>
-      )}
-    </div>
-  )
-}
+          } catch (e) {
+            console.error("Geocoding failed", e);
+          }
+        });
+      }
+    }, [lang]); // Re-fetch news when lang changes
 
-export default App
+    return (
+      <div className="app-container">
+        {notification && <Notification data={notification} />}
+        {!session ? (
+          <Auth setSession={setSession} />
+        ) : (
+          <>
+            <Sidebar activeView={view} setView={setView} isOpen={isMenuOpen} setOpen={setMenuOpen} isPro={isPro} lang={lang} setLang={setLang} t={t} />
+
+            <main className="main-content">
+              <header className="mobile-header">
+                <button className="menu-btn" onClick={() => setMenuOpen(!isMenuOpen)}>
+                  {isMenuOpen ? <LogOut size={24} /> : <Menu size={24} />}
+                </button>
+                <h2>AgriBoost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
+                {/* Profile Icon HIDDEN on mobile as requested, only Hamburger and Title remain */}
+                <div style={{ width: '24px' }}></div>
+              </header>
+
+              {view === 'dashboard' && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
+              {view === 'identity' && <FarmerIdentity isPro={isPro} location={location} setLocation={setLocation} user={user} setUser={setUser} t={t} />}
+              {view === 'diagnosis' && <Diagnosis setView={setView} notify={notify} t={t} lang={lang} />}
+              {view === 'market' && <MarketPrices t={t} />}
+              {view === 'advisory' && <AIAdvisor location={location} t={t} lang={lang} />}
+              {view === 'ussd' && <USSDPreview location={location} t={t} />}
+              {view === 'settings' && <Settings user={user} setUser={setUser} t={t} lang={lang} setLang={setLang} notify={notify} />}
+              {view === 'subscription' && <Subscription isPro={isPro} setIsPro={setIsPro} notify={notify} t={t} />}
+            </main>
+          </>
+        )}
+      </div>
+    )
+  }
+
+  export default App
