@@ -1444,359 +1444,347 @@ const Subscription = ({ isPro, setIsPro, notify, t }) => {
   )
 }
 
+/* Settings Component Definition */
 const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState(user.name || '');
+  const [uploading, setUploading] = useState(false);
+
+  /* Avatar Upload */
+  const uploadAvatar = async (event) => {
+    try {
+      setUploading(true);
+      if (!event.target.files || event.target.files.length === 0) {
+        return; // User cancelled
+      }
+
+      const file = event.target.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+      // Update Profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, image: data.publicUrl, updated_at: new Date() });
+
+      if (updateError) {
+        if (updateError.code === '42P01') throw new Error("Table 'profiles' missing. Run SQL script.");
+        throw updateError;
+      }
+
+      setUser(prev => ({ ...prev, image: data.publicUrl }));
+      notify("Photo updated!", "success");
+
+    } catch (error) {
+      console.error(error);
+      notify(error.message, "danger");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const updateProfile = async () => {
     setLoading(true);
-    const updates = {
-      id: user.id, // Assuming user object now has ID from auth
-      full_name: username,
-      language: lang,
-      updated_at: new Date(),
-    };
-
-    /* Avatar Upload */
-    const [uploading, setUploading] = useState(false);
-
-    const uploadAvatar = async (event) => {
-      try {
-        setUploading(true);
-        if (!event.target.files || event.target.files.length === 0) {
-          throw new Error('You must select an image to upload.');
-        }
-
-        const file = event.target.files[0];
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file);
-
-        if (uploadError) {
-          throw uploadError;
-        }
-
-        // Get Public URL
-        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        const publicUrl = data.publicUrl;
-
-        // Update Profile immediately
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .upsert({ id: user.id, image: publicUrl, updated_at: new Date() });
-
-        if (updateError) throw updateError;
-
-        setUser(prev => ({ ...prev, image: publicUrl }));
-        notify("Profile photo updated!", "success");
-
-      } catch (error) {
-        console.error(error);
-        notify(error.message || "Error uploading image", "danger");
-      } finally {
-        setUploading(false);
-      }
-    };
-
-    const updateProfile = async () => {
-      setLoading(true);
+    try {
       const updates = {
-        id: user.id, // Assuming user object now has ID from auth
+        id: user.id,
         full_name: username,
         language: lang,
         updated_at: new Date(),
       };
-      try {
-        const { error } = await supabase.from('profiles').upsert(updates);
-        if (error) {
-          if (error.code === '42P01') {
-            throw new Error("Database Table Missing! Run the SQL script provided.");
-          }
-          throw error;
-        }
 
-        setUser({ ...user, name: username });
-        notify("Profile updated successfully!", "success");
-      } catch (error) {
-        console.error(error);
-        notify(error.message || "Error updating profile", "danger");
-      } finally {
-        setLoading(false);
+      const { error } = await supabase.from('profiles').upsert(updates);
+      if (error) {
+        if (error.code === '42P01') throw new Error("Table 'profiles' missing. Run SQL script.");
+        throw error;
       }
-    };
 
-    const handleSignOut = async () => {
-      await supabase.auth.signOut();
-      window.location.reload();
+      setUser({ ...user, name: username });
+      notify("Profile updated!", "success");
+    } catch (error) {
+      console.error(error);
+      notify(error.message, "danger");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return (
-      <div className="animate-fade">
-        <h1>Settings</h1>
-        <p>Customize your experience.</p>
-
-        <div className="glass card" style={{ maxWidth: '600px', marginTop: '2rem', padding: '2rem' }}>
-          <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ position: 'relative', width: '80px', height: '80px' }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
-                {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>👤</span>}
-              </div>
-              {/* Edit Icon Overlay */}
-              <label htmlFor="avatar-upload" style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--primary-glow)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff' }}>
-                <Edit2 size={14} color="#000" />
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                onChange={uploadAvatar}
-                disabled={uploading}
-                style={{ display: 'none' }}
-              />
-            </div>
-            <div>
-              <h3>{user.email}</h3>
-              <div className="badge badge-outline">{uploading ? 'Uploading...' : 'Farmer Account'}</div>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Display Name</label>
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Language Preference</label>
-            <select
-              value={lang}
-              onChange={(e) => setLang(e.target.value)}
-              style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
-            >
-              <option value="en">English (US)</option>
-              <option value="ha">Hausa (Nigeria)</option>
-              <option value="yo">Yoruba (Nigeria)</option>
-              <option value="ig">Igbo (Nigeria)</option>
-            </select>
-          </div>
-
-          <button onClick={updateProfile} className="btn btn-primary" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
-
-          <hr style={{ margin: '2rem 0', borderColor: '#444' }} />
-
-          <button onClick={handleSignOut} className="btn" style={{ background: 'var(--danger)', color: '#fff' }}>
-            Sign Out
-          </button>
-        </div>
-      </div>
-    )
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
   }
 
-  function App() {
-    const [view, setView] = useState('dashboard')
-    const [isMenuOpen, setMenuOpen] = useState(false)
-    const [location, setLocation] = useState({ lat: null, lon: null, city: '' })
+  return (
+    <div className="animate-fade">
+      <h1>Settings</h1>
+      <p>Customize your experience.</p>
 
-    const { notification, notify } = useNotify()
+      <div className="glass card" style={{ maxWidth: '600px', marginTop: '2rem', padding: '2rem' }}>
+        <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
+              {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>👤</span>}
+            </div>
+            <label htmlFor="avatar-upload" style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--primary-glow)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff' }}>
+              <Edit2 size={14} color="#000" />
+            </label>
+            <input
+              id="avatar-upload"
+              type="file"
+              accept="image/*"
+              onChange={uploadAvatar}
+              disabled={uploading}
+              style={{ display: 'none' }}
+            />
+          </div>
+          <div>
+            <h3>{user.email}</h3>
+            <div className="badge badge-outline">{uploading ? 'Uploading...' : 'Farmer Account'}</div>
+          </div>
+        </div>
 
-    /* Language State */
-    const [lang, setLang] = useState(() => localStorage.getItem('agriboost_lang') || 'en');
-    useEffect(() => localStorage.setItem('agriboost_lang', lang), [lang]);
-    const t = translations[lang];
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Display Name</label>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
+          />
+        </div>
 
-    /* Global User State with Persistence */
-    const [user, setUser] = useState(() => {
-      const saved = localStorage.getItem('agriboost_user');
-      return saved ? JSON.parse(saved) : {
-        name: 'Guest Farmer',
-        city: 'Detecting...',
-        image: null,
-        joined: new Date().toLocaleDateString()
-      };
-    });
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem' }}>Language Preference</label>
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value)}
+            style={{ width: '100%', padding: '1rem', background: '#222', border: '1px solid #444', borderRadius: '12px', color: '#fff' }}
+          >
+            <option value="en">English (US)</option>
+            <option value="ha">Hausa (Nigeria)</option>
+            <option value="yo">Yoruba (Nigeria)</option>
+            <option value="ig">Igbo (Nigeria)</option>
+          </select>
+        </div>
 
-    useEffect(() => {
-      localStorage.setItem('agriboost_user', JSON.stringify(user));
-    }, [user]);
+        <button onClick={updateProfile} className="btn btn-primary" disabled={loading}>
+          {loading ? 'Saving...' : 'Save Changes'}
+        </button>
 
-    /* Sync Pro state with User state */
-    const [isPro, setIsPro] = useState(() => {
-      return localStorage.getItem('agriboost_isPro') === 'true';
-    });
+        <hr style={{ margin: '2rem 0', borderColor: '#444' }} />
 
-    useEffect(() => {
-      localStorage.setItem('agriboost_isPro', isPro);
-    }, [isPro]);
+        <button onClick={handleSignOut} className="btn" style={{ background: 'var(--danger)', color: '#fff' }}>
+          Sign Out
+        </button>
+      </div>
+    </div>
+  )
+}
 
-    const [weather, setWeather] = useState({ temp: '--', condition: 'Fetching...', humidity: '--' })
-    const [recentActivity, setRecentActivity] = useState([
-      { msg: 'Connecting to Agri-Intelligence Network...', time: 'Just now', icon: '📡' }
-    ])
-    /* Auth Session State */
-    const [session, setSession] = useState(null)
+function App() {
+  const [view, setView] = useState('dashboard')
+  const [isMenuOpen, setMenuOpen] = useState(false)
+  const [location, setLocation] = useState({ lat: null, lon: null, city: '' })
 
-    useEffect(() => {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setSession(session)
-      })
+  const { notification, notify } = useNotify()
 
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session)
-      })
+  /* Language State */
+  const [lang, setLang] = useState(() => localStorage.getItem('agriboost_lang') || 'en');
+  useEffect(() => localStorage.setItem('agriboost_lang', lang), [lang]);
+  const t = translations[lang];
 
-      return () => subscription.unsubscribe()
-    }, [])
+  /* Global User State with Persistence */
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('agriboost_user');
+    return saved ? JSON.parse(saved) : {
+      name: 'Guest Farmer',
+      city: 'Detecting...',
+      image: null,
+      joined: new Date().toLocaleDateString()
+    };
+  });
 
-    /* Load Profile on Session */
-    useEffect(() => {
-      if (session) {
-        const getProfile = async () => {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+  useEffect(() => {
+    localStorage.setItem('agriboost_user', JSON.stringify(user));
+  }, [user]);
 
-          if (data) {
-            setUser(prev => ({ ...prev, name: data.full_name || session.user.email, id: session.user.id, email: session.user.email }));
-            if (data.language) setLang(data.language);
-            if (data.is_pro) setIsPro(data.is_pro);
-          } else {
-            // Init profile if new
-            setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url }));
-          }
+  /* Sync Pro state with User state */
+  const [isPro, setIsPro] = useState(() => {
+    return localStorage.getItem('agriboost_isPro') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('agriboost_isPro', isPro);
+  }, [isPro]);
+
+  const [weather, setWeather] = useState({ temp: '--', condition: 'Fetching...', humidity: '--' })
+  const [recentActivity, setRecentActivity] = useState([
+    { msg: 'Connecting to Agri-Intelligence Network...', time: 'Just now', icon: '📡' }
+  ])
+  /* Auth Session State */
+  const [session, setSession] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  /* Load Profile on Session */
+  useEffect(() => {
+    if (session) {
+      const getProfile = async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (data) {
+          setUser(prev => ({ ...prev, name: data.full_name || session.user.email, id: session.user.id, email: session.user.email }));
+          if (data.language) setLang(data.language);
+          if (data.is_pro) setIsPro(data.is_pro);
+        } else {
+          // Init profile if new
+          setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url }));
         }
-        getProfile();
       }
-    }, [session]);
+      getProfile();
+    }
+  }, [session]);
 
 
-    // 3. AI-Powered Real-Time News Feed
-    const generateLiveInsights = async (city, weatherCond) => {
-      if (!GROQ_API_KEY || !city || city === 'Detecting...') return;
+  // 3. AI-Powered Real-Time News Feed
+  const generateLiveInsights = async (city, weatherCond) => {
+    if (!GROQ_API_KEY || !city || city === 'Detecting...') return;
 
-      try {
-        const prompt = `Generate 3 short, urgent, real-time agricultural alerts or market news headlines specifically for a farmer in ${city}, Nigeria, given the current weather is "${weatherCond}". 
+    try {
+      const prompt = `Generate 3 short, urgent, real-time agricultural alerts or market news headlines specifically for a farmer in ${city}, Nigeria, given the current weather is "${weatherCond}". 
       Make them sound like live news ticker items. 
       Return ONLY valid JSON array of objects: [{"msg": "headline text", "icon": "emoji like 🌧️, 📉, 🦠, 🚜"}]
       Translate the headlines to ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.`;
 
-        const response = await callGroqAI(prompt);
-        // Clean JSON string (handle backticks)
-        const cleanJson = response.replace(/```json|```/g, '').trim();
-        const insights = JSON.parse(cleanJson);
+      const response = await callGroqAI(prompt);
+      // Clean JSON string (handle backticks)
+      const cleanJson = response.replace(/```json|```/g, '').trim();
+      const insights = JSON.parse(cleanJson);
 
-        // Add timestamps
-        const taggedInsights = insights.map(item => ({
-          ...item,
-          time: 'Live Feed'
-        }));
+      // Add timestamps
+      const taggedInsights = insights.map(item => ({
+        ...item,
+        time: 'Live Feed'
+      }));
 
-        setRecentActivity(taggedInsights);
-      } catch (e) {
-        console.error("News gen failed", e);
-      }
-    };
+      setRecentActivity(taggedInsights);
+    } catch (e) {
+      console.error("News gen failed", e);
+    }
+  };
 
-    useEffect(() => {
-      /* REAL GEOLOCATION & WEATHER & CITY */
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(async (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setLocation(prev => ({ ...prev, lat: latitude, lon: longitude }));
+  useEffect(() => {
+    /* REAL GEOLOCATION & WEATHER & CITY */
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setLocation(prev => ({ ...prev, lat: latitude, lon: longitude }));
 
-          // 1. Fetch Real Weather (Open-Meteo Free API)
-          let currentCondition = 'Clear';
-          try {
-            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code`);
-            const weatherData = await weatherRes.json();
-            const w = weatherData.current;
+        // 1. Fetch Real Weather (Open-Meteo Free API)
+        let currentCondition = 'Clear';
+        try {
+          const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code`);
+          const weatherData = await weatherRes.json();
+          const w = weatherData.current;
 
-            // Map WMO codes to text/icons
-            const getWeatherLabel = (code) => {
-              if (code === 0) return "Clear Sky";
-              if (code < 4) return "Partly Cloudy";
-              if (code < 50) return "Foggy";
-              if (code < 80) return "Rainy";
-              return "Thunderstorm";
-            }
-            currentCondition = getWeatherLabel(w.weather_code);
+          // Map WMO codes to text/icons
+          const getWeatherLabel = (code) => {
+            if (code === 0) return "Clear Sky";
+            if (code < 4) return "Partly Cloudy";
+            if (code < 50) return "Foggy";
+            if (code < 80) return "Rainy";
+            return "Thunderstorm";
+          }
+          currentCondition = getWeatherLabel(w.weather_code);
 
-            setWeather({
-              temp: w.temperature_2m,
-              humidity: w.relative_humidity_2m,
-              condition: currentCondition
-            });
-          } catch (e) {
-            console.error("Weather fetch failed", e);
+          setWeather({
+            temp: w.temperature_2m,
+            humidity: w.relative_humidity_2m,
+            condition: currentCondition
+          });
+        } catch (e) {
+          console.error("Weather fetch failed", e);
+        }
+
+        // 2. Real Reverse Geocoding (BigDataCloud Free API)
+        try {
+          const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
+          const geoData = await geoRes.json();
+          const city = geoData.city || geoData.locality || "Nigeria";
+
+          setLocation(prev => ({ ...prev, city }));
+
+          // Update user city if it was default
+          if (user.city === 'Detecting...' || user.city === 'Kaduna') {
+            setUser(prev => ({ ...prev, city }));
           }
 
-          // 2. Real Reverse Geocoding (BigDataCloud Free API)
-          try {
-            const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`);
-            const geoData = await geoRes.json();
-            const city = geoData.city || geoData.locality || "Nigeria";
+          // Trigger AI News Generation
+          generateLiveInsights(city, currentCondition);
 
-            setLocation(prev => ({ ...prev, city }));
+        } catch (e) {
+          console.error("Geocoding failed", e);
+        }
+      });
+    }
+  }, [lang]); // Re-fetch news when lang changes
 
-            // Update user city if it was default
-            if (user.city === 'Detecting...' || user.city === 'Kaduna') {
-              setUser(prev => ({ ...prev, city }));
-            }
+  return (
+    <div className="app-container">
+      {notification && <Notification data={notification} />}
+      {!session ? (
+        <Auth setSession={setSession} />
+      ) : (
+        <>
+          <Sidebar activeView={view} setView={setView} isOpen={isMenuOpen} setOpen={setMenuOpen} isPro={isPro} lang={lang} setLang={setLang} t={t} />
 
-            // Trigger AI News Generation
-            generateLiveInsights(city, currentCondition);
+          <main className="main-content">
+            <header className="mobile-header">
+              <button className="menu-btn" onClick={() => setMenuOpen(!isMenuOpen)}>
+                {isMenuOpen ? <LogOut size={24} /> : <Menu size={24} />}
+              </button>
+              <h2>AgriBoost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
+              {/* Profile Icon HIDDEN on mobile as requested, only Hamburger and Title remain */}
+              <div style={{ width: '24px' }}></div>
+            </header>
 
-          } catch (e) {
-            console.error("Geocoding failed", e);
-          }
-        });
-      }
-    }, [lang]); // Re-fetch news when lang changes
+            {view === 'dashboard' && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
+            {view === 'identity' && <FarmerIdentity isPro={isPro} location={location} setLocation={setLocation} user={user} setUser={setUser} t={t} />}
+            {view === 'diagnosis' && <Diagnosis setView={setView} notify={notify} t={t} lang={lang} />}
+            {view === 'market' && <MarketPrices t={t} />}
+            {view === 'advisory' && <AIAdvisor location={location} t={t} lang={lang} />}
+            {view === 'ussd' && <USSDPreview location={location} t={t} />}
+            {view === 'settings' && <Settings user={user} setUser={setUser} t={t} lang={lang} setLang={setLang} notify={notify} />}
+            {view === 'subscription' && <Subscription isPro={isPro} setIsPro={setIsPro} notify={notify} t={t} />}
+          </main>
+        </>
+      )}
+    </div>
+  )
+}
 
-    return (
-      <div className="app-container">
-        {notification && <Notification data={notification} />}
-        {!session ? (
-          <Auth setSession={setSession} />
-        ) : (
-          <>
-            <Sidebar activeView={view} setView={setView} isOpen={isMenuOpen} setOpen={setMenuOpen} isPro={isPro} lang={lang} setLang={setLang} t={t} />
-
-            <main className="main-content">
-              <header className="mobile-header">
-                <button className="menu-btn" onClick={() => setMenuOpen(!isMenuOpen)}>
-                  {isMenuOpen ? <LogOut size={24} /> : <Menu size={24} />}
-                </button>
-                <h2>AgriBoost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
-                {/* Profile Icon HIDDEN on mobile as requested, only Hamburger and Title remain */}
-                <div style={{ width: '24px' }}></div>
-              </header>
-
-              {view === 'dashboard' && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
-              {view === 'identity' && <FarmerIdentity isPro={isPro} location={location} setLocation={setLocation} user={user} setUser={setUser} t={t} />}
-              {view === 'diagnosis' && <Diagnosis setView={setView} notify={notify} t={t} lang={lang} />}
-              {view === 'market' && <MarketPrices t={t} />}
-              {view === 'advisory' && <AIAdvisor location={location} t={t} lang={lang} />}
-              {view === 'ussd' && <USSDPreview location={location} t={t} />}
-              {view === 'settings' && <Settings user={user} setUser={setUser} t={t} lang={lang} setLang={setLang} notify={notify} />}
-              {view === 'subscription' && <Subscription isPro={isPro} setIsPro={setIsPro} notify={notify} t={t} />}
-            </main>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  export default App
+export default App
