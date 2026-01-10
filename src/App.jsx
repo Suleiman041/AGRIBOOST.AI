@@ -531,7 +531,7 @@ const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
       {/* Live News */}
       <div>
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}><Newspaper size={20} /> {t.news}</h2>
-        <div className="glass" style={{ height: '350px', padding: '1.5rem', overflowY: 'auto' }}>
+        <div className="glass" style={{ height: '100%', minHeight: '350px', padding: '1.5rem', overflowY: 'auto' }}>
           {recentActivity.map((item, i) => (
             <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
               <div style={{ background: 'rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '8px' }}>
@@ -549,7 +549,7 @@ const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
       {/* Quick Actions / Promo Side */}
       <div>
         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}><Zap size={20} /> {t.quick}</h2>
-        <div className="glass card" style={{ height: '350px', background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.3) 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <div className="glass card" style={{ height: '100%', minHeight: '350px', background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.3) 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}><Sprout size={48} strokeWidth={1} /></div>
           <h3>{t.soil_analysis}</h3>
           <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '2rem' }}>{t.coming_soon}</p>
