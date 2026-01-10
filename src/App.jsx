@@ -1520,9 +1520,9 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
 
       <div className="glass card" style={{ maxWidth: '600px', marginTop: '2rem', padding: '2rem' }}>
         <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+          <div style={{ position: 'relative', width: '80px', height: '80px', minWidth: '80px', minHeight: '80px' }}>
             <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem' }}>👤</span>}
+              {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <span style={{ fontSize: '2rem' }}>👤</span>}
             </div>
           </div>
           <div>
