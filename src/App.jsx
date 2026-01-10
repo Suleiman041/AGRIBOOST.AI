@@ -73,7 +73,8 @@ const translations = {
     commodity: 'Commodity',
     price: 'Price',
     trend: 'Trend',
-    loc: 'Location'
+    loc: 'Location',
+    settings: 'Settings'
   },
   ha: {
     app_name: 'AgriBoost',
@@ -108,7 +109,8 @@ const translations = {
     commodity: 'Kaya',
     price: 'Farashi',
     trend: 'Yanayi',
-    loc: 'Wuri'
+    loc: 'Wuri',
+    settings: 'Saituna'
   },
   yo: {
     app_name: 'AgriBoost',
@@ -143,7 +145,8 @@ const translations = {
     commodity: 'Ọja',
     price: 'Iye',
     trend: 'Ojutole',
-    loc: 'Ipo'
+    loc: 'Ipo',
+    settings: 'Eto'
   },
   ig: {
     app_name: 'AgriBoost',
@@ -178,7 +181,8 @@ const translations = {
     commodity: 'Ngwaahịa',
     price: 'Ọnụahịa',
     trend: 'Omume',
-    loc: 'Ebe'
+    loc: 'Ebe',
+    settings: 'Ntọala'
   }
 };
 
@@ -466,7 +470,7 @@ const Sidebar = ({ activeView, setView, isOpen, setOpen, isPro, lang, setLang, t
         { id: 'market', label: t.market, icon: <Newspaper size={18} /> },
         { id: 'advisory', label: t.advisor, icon: <Zap size={18} /> },
         { id: 'ussd', label: t.ussd, icon: <Smartphone size={18} /> },
-        { id: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
+        { id: 'settings', label: t.settings, icon: <SettingsIcon size={18} /> },
         { id: 'subscription', label: isPro ? t.sub : t.upgrade, icon: <CreditCard size={18} /> },
       ].map(item => (
         <a
@@ -1525,8 +1529,8 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
               {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <span style={{ fontSize: '2rem' }}>👤</span>}
             </div>
           </div>
-          <div>
-            <h3>{user.email}</h3>
+          <div style={{ minWidth: 0, flex: 1 }}> {/* Allow shrinking */}
+            <h3 style={{ fontSize: '1rem', wordBreak: 'break-all', marginBottom: '0.2rem' }}>{user.email}</h3>
             <div className="badge badge-outline">Farmer Account</div>
           </div>
         </div>
