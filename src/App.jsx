@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 import {
   Sprout, Thermometer, MapPin, Newspaper, Zap, Menu, Plus,
   Trash2, Edit2, Settings as SettingsIcon, CreditCard, Smartphone, Search,
-  ChevronRight, LogOut, User, Activity, AlertTriangle
+  ChevronRight, LogOut, User, Activity, AlertTriangle, X
 } from 'lucide-react';
 
 /* Mock Toaster Hook */
@@ -1448,47 +1448,37 @@ const Subscription = ({ isPro, setIsPro, notify, t }) => {
 const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
   const [loading, setLoading] = useState(false);
   const [username, setUsername] = useState(user.name || '');
-  const [uploading, setUploading] = useState(false);
 
-  /* Avatar Upload */
-  const uploadAvatar = async (event) => {
+  // Custom Farmer Avatars
+  const AVATARS = [
+    'https://cdn-icons-png.flaticon.com/512/3063/3063822.png', // Farmer M
+    'https://cdn-icons-png.flaticon.com/512/3063/3063824.png', // Farmer F
+    'https://cdn-icons-png.flaticon.com/512/3135/3135715.png', // Older Farmer M
+    'https://cdn-icons-png.flaticon.com/512/3135/3135768.png', // Older Farmer F
+  ];
+
+  /* Avatar Selection */
+  const selectAvatar = async (url) => {
     try {
-      setUploading(true);
-      if (!event.target.files || event.target.files.length === 0) {
-        return; // User cancelled
-      }
-
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
+      setLoading(true);
       // Update Profile
       const { error: updateError } = await supabase
         .from('profiles')
-        .upsert({ id: user.id, image: data.publicUrl, updated_at: new Date() });
+        .upsert({ id: user.id, image: url, updated_at: new Date() });
 
       if (updateError) {
         if (updateError.code === '42P01') throw new Error("Table 'profiles' missing. Run SQL script.");
         throw updateError;
       }
 
-      setUser(prev => ({ ...prev, image: data.publicUrl }));
-      notify("Photo updated!", "success");
+      setUser(prev => ({ ...prev, image: url }));
+      notify("Avatar updated!", "success");
 
     } catch (error) {
       console.error(error);
       notify(error.message, "danger");
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
@@ -1534,21 +1524,37 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
             <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
               {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>👤</span>}
             </div>
-            <label htmlFor="avatar-upload" style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--primary-glow)', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff' }}>
-              <Edit2 size={14} color="#000" />
-            </label>
-            <input
-              id="avatar-upload"
-              type="file"
-              accept="image/*"
-              onChange={uploadAvatar}
-              disabled={uploading}
-              style={{ display: 'none' }}
-            />
           </div>
           <div>
             <h3>{user.email}</h3>
-            <div className="badge badge-outline">{uploading ? 'Uploading...' : 'Farmer Account'}</div>
+            <div className="badge badge-outline">Farmer Account</div>
+          </div>
+        </div>
+
+        {/* Avatar Selection Grid */}
+        <div style={{ marginBottom: '2rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#ccc' }}>Choose Avatar</label>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {AVATARS.map((url, i) => (
+              <div
+                key={i}
+                onClick={() => selectAvatar(url)}
+                style={{
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  border: user.image === url ? '3px solid var(--primary-glow)' : '2px solid transparent',
+                  padding: '2px',
+                  transition: 'transform 0.2s',
+                  background: 'rgba(255,255,255,0.1)'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <img src={url} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -1764,12 +1770,10 @@ function App() {
 
           <main className="main-content">
             <header className="mobile-header">
+              <h2 style={{ margin: 0 }}>AgriBoost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
               <button className="menu-btn" onClick={() => setMenuOpen(!isMenuOpen)}>
-                {isMenuOpen ? <LogOut size={24} /> : <Menu size={24} />}
+                {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
               </button>
-              <h2>AgriBoost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
-              {/* Profile Icon HIDDEN on mobile as requested, only Hamburger and Title remain */}
-              <div style={{ width: '24px' }}></div>
             </header>
 
             {view === 'dashboard' && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
