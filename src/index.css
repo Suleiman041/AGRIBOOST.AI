@@ -134,6 +134,21 @@ body {
   z-index: 1000;
   background: var(--bg-dark);
   transition: transform 0.3s ease;
+  overflow-y: auto;
+  /* Enable vertical scrolling */
+  scrollbar-width: thin;
+  /* Firefox */
+  scrollbar-color: var(--primary-glow) transparent;
+}
+
+/* Scrollbar Styles for Webkit */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--primary-glow);
+  border-radius: 3px;
 }
 
 .main-content {

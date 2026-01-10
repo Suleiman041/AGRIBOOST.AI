@@ -1685,8 +1685,14 @@ function App() {
     if (!GROQ_API_KEY || !city || city === 'Detecting...') return;
 
     try {
-      const prompt = `Generate 3 short, urgent, real-time agricultural alerts or market news headlines specifically for a farmer in ${city}, Nigeria, given the current weather is "${weatherCond}". 
-      Make them sound like live news ticker items. 
+      const prompt = `Generate 3 short, urgent, real-time agricultural advisories or market tips for a farmer in ${city}, Nigeria, given that the current weather is "${weatherCond}". 
+      
+      RULES:
+      1. Do NOT make up fake events (e.g. do not say "Government bans fertilizer").
+      2. Focus on PRACTICAL ADVICE (e.g. "High humidity detected. Watch out for fungal diseases on Maize").
+      3. Focus on MARKET TRENDS (e.g. "Yam prices are stable this week").
+      4. Make them sound like urgent ticker alerts.
+
       Return ONLY valid JSON array of objects: [{"msg": "headline text", "icon": "emoji like 🌧️, 📉, 🦠, 🚜"}]
       Translate the headlines to ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.`;
 
