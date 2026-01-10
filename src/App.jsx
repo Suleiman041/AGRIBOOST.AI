@@ -1521,8 +1521,8 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
       <div className="glass card" style={{ maxWidth: '600px', marginTop: '2rem', padding: '2rem' }}>
         <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ position: 'relative', width: '80px', height: '80px' }}>
-            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden' }}>
-              {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>👤</span>}
+            <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#333', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {user.image ? <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '2rem' }}>👤</span>}
             </div>
           </div>
           <div>
@@ -1771,7 +1771,11 @@ function App() {
           <main className="main-content">
             <header className="mobile-header">
               <h2 style={{ margin: 0 }}>AgriBoost<span style={{ color: 'var(--primary-glow)' }}>AI</span></h2>
-              <button className="menu-btn" onClick={() => setMenuOpen(!isMenuOpen)}>
+              <button
+                className="menu-btn"
+                onClick={() => setMenuOpen(!isMenuOpen)}
+                style={{ background: 'transparent', border: 'none', color: '#fff' }}
+              >
                 {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
               </button>
             </header>
