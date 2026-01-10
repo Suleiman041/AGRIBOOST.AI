@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import { supabase } from './supabase'
 import {
   Sprout, Thermometer, MapPin, Newspaper, Zap, Menu, Plus,
-  Trash2, Edit2, Settings, CreditCard, Smartphone, Search,
+  Trash2, Edit2, Settings as SettingsIcon, CreditCard, Smartphone, Search,
   ChevronRight, LogOut, User, Activity, AlertTriangle
 } from 'lucide-react';
 
@@ -466,7 +466,7 @@ const Sidebar = ({ activeView, setView, isOpen, setOpen, isPro, lang, setLang, t
         { id: 'market', label: t.market, icon: <Newspaper size={18} /> },
         { id: 'advisory', label: t.advisor, icon: <Zap size={18} /> },
         { id: 'ussd', label: t.ussd, icon: <Smartphone size={18} /> },
-        { id: 'settings', label: 'Settings', icon: <Settings size={18} /> },
+        { id: 'settings', label: 'Settings', icon: <SettingsIcon size={18} /> },
         { id: 'subscription', label: isPro ? t.sub : t.upgrade, icon: <CreditCard size={18} /> },
       ].map(item => (
         <a
