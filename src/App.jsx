@@ -205,7 +205,7 @@ const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 const STRIPE_LINK = import.meta.env.VITE_STRIPE_PAYMENT_LINK || ""; // e.g. https://buy.stripe.com/test_...
 
 
-const callGroqAI = async (prompt) => {
+const callGroqAI = async (messages) => {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -214,8 +214,8 @@ const callGroqAI = async (prompt) => {
     },
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 500,
+      messages: messages, // Send full history
+      max_tokens: 1000,
       temperature: 0.7
     }),
   });
@@ -635,7 +635,13 @@ const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
       }
     } catch (err) {
       console.error("AI Scan Error Details:", err);
-      notify(`AI Scan Error: ${err.message || 'Check console'}`, "warn");
+      // Give more specific feedback
+      const errMsg = err.message.includes('404') ? 'AI Model Unavailable (404). Using Simulator.' :
+        err.message.includes('400') ? 'Bad Request. Image too large?' :
+          'Connection Error. Using Simulator.';
+      notify(errMsg, "warn");
+
+      // Fallback only if strictly necessary or requested, but let's try to be helpful
       simulateAnalysis();
     } finally {
       setAnalyzing(false);
@@ -949,14 +955,25 @@ const AIAdvisor = ({ location, t, lang, checkUsage }) => {
     }
 
     try {
-      const prompt = `You are AgriBoost AI, a professional agricultural advisor in Nigeria. User is at coordinates ${location.lat}, ${location.lon} in ${location.city}. 
-      Provide concise, practical farming advice for a smallholder farmer. 
-      Use Markdown formatting (bolding, lists, paragraphs) to make the text easy to read on a mobile phone (ChatGPT style).
-      Translate your response to ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.
+      // Construct Context + History
+      const systemPrompt = `You are AgriBoost AI, a professional agricultural advisor in Nigeria. 
+      User Location: ${location.city || 'Nigeria'} (${location.lat || 'Unknown'}, ${location.lon || 'Unknown'}).
+      Tone: Professional, Concise, Helpful.
+      Format: Markdown (bold key terms, use bullet points). 
+      Language: Respond in ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.
+      
+      Maintain context of the conversation.`;
 
-User question: ${userMsg}`;
+      // Create conversation history payload
+      // Filter out 'System' messages if we want to add fresh system prompt every time, 
+      // or just prepend system prompt to the API call array.
+      const apiMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages.map(m => ({ role: m.role, content: m.content })), // History
+        { role: "user", content: userMsg } // Current Message
+      ];
 
-      const response = await callGroqAI(prompt);
+      const response = await callGroqAI(apiMessages);
       setMessages(prev => [...prev, { role: 'ai', content: response }]);
     } catch (err) {
       console.error("AI Advisor Error Details:", err);
@@ -967,33 +984,102 @@ User question: ${userMsg}`;
   }
 
   return (
-    <div className="animate-fade">
-      <h1>{t.advisor_title}</h1>
-      <p>{t.advisor_desc}</p>
+    <div className="animate-fade" style={{ display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '85vh' }}>
+      <div style={{ padding: '0 0.5rem' }}>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.2rem' }}>{t.advisor_title}</h1>
+        <p style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '1rem' }}>{t.advisor_desc}</p>
+      </div>
 
-      <div className="glass card" style={{ marginTop: '2rem', height: '600px', display: 'flex', flexDirection: 'column' }}>
-        <div className="chat-container" style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className="glass card" style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 0,
+        overflow: 'hidden',
+        border: '1px solid var(--glass-border)'
+      }}>
+        {/* Chat Scroll Area */}
+        <div className="chat-container" style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '1.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1.5rem'
+        }}>
           {messages.map((msg, i) => (
-            <div key={i} className={`bubble ${msg.role === 'ai' ? 'bubble-ai' : 'bubble-user'}`}>
+            <div key={i} className={`bubble ${msg.role === 'ai' ? 'bubble-ai' : 'bubble-user'}`} style={{
+              alignSelf: msg.role === 'ai' ? 'flex-start' : 'flex-end',
+              background: msg.role === 'ai' ? 'rgba(255,255,255,0.1)' : 'var(--primary-glow)',
+              color: msg.role === 'ai' ? '#fff' : '#000',
+              padding: '1rem 1.2rem',
+              borderRadius: msg.role === 'ai' ? '12px 12px 12px 0' : '12px 12px 0 12px',
+              maxWidth: '85%',
+              lineHeight: '1.5',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+            }}>
+              {msg.role === 'ai' && <div style={{ fontSize: '0.7rem', opacity: 0.7, marginBottom: '0.3rem', fontWeight: 'bold' }}>🤖 AgriBoost AI</div>}
               <ReactMarkdown>{msg.content}</ReactMarkdown>
             </div>
           ))}
-          {loading && <div className="bubble bubble-ai">AI is thinking...</div>}
+          {loading && (
+            <div className="bubble bubble-ai" style={{ alignSelf: 'flex-start', background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '12px' }}>
+              <span className="typing-dot">●</span><span className="typing-dot">●</span><span className="typing-dot">●</span>
+            </div>
+          )}
           <div ref={chatEndRef} />
         </div>
 
-        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--glass-border)', display: 'flex', gap: '1rem' }}>
+        {/* Fixed Input Area */}
+        <div style={{
+          padding: '1rem',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+          background: 'rgba(0,0,0,0.3)',
+          display: 'flex',
+          gap: '0.8rem',
+          alignItems: 'center'
+        }}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             placeholder={t.advisor_chat_placeholder}
-            style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '0 1.5rem', color: '#fff', outline: 'none' }}
+            style={{
+              flex: 1,
+              background: 'rgba(0,0,0,0.4)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '24px',
+              padding: '0.8rem 1.2rem',
+              color: '#fff',
+              outline: 'none',
+              fontSize: '16px' // Critical: Prevents iOS zoom on focus
+            }}
           />
-          <button className="btn btn-primary" onClick={handleSend} disabled={loading}>Speak to AI</button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSend}
+            disabled={loading}
+            style={{
+              borderRadius: '50%',
+              width: '45px',
+              height: '45px',
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            ➤
+          </button>
         </div>
       </div>
+      <style>{`
+        .typing-dot { animation: bg 1.4s infinite ease-in-out both; margin: 0 2px; font-size: 1.5rem; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bg { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
+      `}</style>
     </div>
   )
 }
@@ -1641,7 +1727,7 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
   )
 }
 
-const SuccessPage = ({ setView }) => {
+const SuccessPage = ({ setView, user, isPro }) => {
   useEffect(() => {
     // Fire confetti logic or sound here if desired
   }, []);
@@ -1720,36 +1806,44 @@ function App() {
   }, [user]);
 
   /* Sync Pro state with User state */
-  const [isPro, setIsPro] = useState(() => {
-    return localStorage.getItem('agriboost_isPro') === 'true';
-  });
+  const [isPro, setIsPro] = useState(false);
 
+  /* Usage Limits State (Daily Reset) - Scope to User ID */
+  const [usage, setUsage] = useState({ date: new Date().toDateString(), chats: 0, scans: 0 });
+
+  // Load/Save Usage per User
   useEffect(() => {
-    localStorage.setItem('agriboost_isPro', isPro);
-  }, [isPro]);
+    if (!user || user.name === 'Guest Farmer') return;
 
-  /* Usage Limits State (Daily Reset) */
-  const [usage, setUsage] = useState(() => {
-    const saved = localStorage.getItem('agriboost_usage');
-    try {
-      const parsed = JSON.parse(saved);
-      // Basic schema validation
-      if (parsed && parsed.date && typeof parsed.chats === 'number') return parsed;
-    } catch (e) { /* ignore */ }
-    return { date: new Date().toDateString(), chats: 0, scans: 0 };
-  });
-
-  useEffect(() => {
+    const key = `agriboost_usage_${user.id}`;
+    const saved = localStorage.getItem(key);
     const today = new Date().toDateString();
-    if (usage.date !== today) {
-      // Daily Reset
-      const newUsage = { date: today, chats: 0, scans: 0 };
-      setUsage(newUsage);
-      localStorage.setItem('agriboost_usage', JSON.stringify(newUsage));
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.date !== today) {
+          // Reset for new day
+          const newUsage = { date: today, chats: 0, scans: 0 };
+          setUsage(newUsage);
+          localStorage.setItem(key, JSON.stringify(newUsage));
+        } else {
+          setUsage(parsed);
+        }
+      } catch (e) {
+        setUsage({ date: today, chats: 0, scans: 0 });
+      }
     } else {
-      localStorage.setItem('agriboost_usage', JSON.stringify(usage));
+      setUsage({ date: today, chats: 0, scans: 0 });
     }
-  }, [usage]);
+  }, [user.id]); // Reload when user changes
+
+  // Persist usage change
+  useEffect(() => {
+    if (user.id) {
+      localStorage.setItem(`agriboost_usage_${user.id}`, JSON.stringify(usage));
+    }
+  }, [usage, user.id]);
 
   /* Limit Checker */
   const checkUsage = (type) => {
@@ -1812,13 +1906,18 @@ function App() {
         if (data) {
           setUser(prev => ({ ...prev, name: data.full_name || session.user.email, id: session.user.id, email: session.user.email }));
           if (data.language) setLang(data.language);
-          if (data.is_pro) setIsPro(data.is_pro);
+          // Set Pro from DB, defaulting to false if undefined
+          setIsPro(!!data.is_pro);
         } else {
           // Init profile if new
           setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url }));
+          setIsPro(false);
         }
       }
       getProfile();
+    } else {
+      // No session = Guest = No Pro
+      setIsPro(false);
     }
   }, [session]);
 
