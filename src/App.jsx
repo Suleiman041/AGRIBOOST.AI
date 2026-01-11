@@ -1938,7 +1938,7 @@ function App() {
       Return ONLY valid JSON array of objects: [{"msg": "headline text", "icon": "emoji like 🌧️, 📉, 🦠, 🚜"}]
       Translate the headlines to ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.`;
 
-      const response = await callGroqAI(prompt);
+      const response = await callGroqAI([{ role: "user", content: prompt }]);
       // Clean JSON string (handle backticks)
       const cleanJson = response.replace(/```json|```/g, '').trim();
       const insights = JSON.parse(cleanJson);
