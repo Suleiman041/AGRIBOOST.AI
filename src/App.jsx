@@ -74,7 +74,10 @@ const translations = {
     price: 'Price',
     trend: 'Trend',
     loc: 'Location',
-    settings: 'Settings'
+    settings: 'Settings',
+    limit_reached: 'You’ve reached today’s free limit. Upgrade to AgriBoost Pro for unlimited access.',
+    scan_limit: 'Daily Crop Scans',
+    chat_limit: 'Daily AI Chats'
   },
   ha: {
     app_name: 'AgriBoost',
@@ -110,7 +113,10 @@ const translations = {
     price: 'Farashi',
     trend: 'Yanayi',
     loc: 'Wuri',
-    settings: 'Saituna'
+    settings: 'Saituna',
+    limit_reached: 'Ka kai iyaka kyauta ta yau. Haɓaka zuwa AgriBoost Pro don samun dama mara iyaka.',
+    scan_limit: 'Binciken Shuka na Kullum',
+    chat_limit: 'Tattaunawar AI na Kullum'
   },
   yo: {
     app_name: 'AgriBoost',
@@ -146,7 +152,10 @@ const translations = {
     price: 'Iye',
     trend: 'Ojutole',
     loc: 'Ipo',
-    settings: 'Eto'
+    settings: 'Eto',
+    limit_reached: 'O ti de opin opin ofe oni. Ṣe igbesoke si AgriBoost Pro fun iraye ailopin.',
+    scan_limit: 'Awọn Scans Irugbin Ojoojumọ',
+    chat_limit: 'Awọn ibaraẹnisọrọ AI Ojoojumọ'
   },
   ig: {
     app_name: 'AgriBoost',
@@ -182,12 +191,19 @@ const translations = {
     price: 'Ọnụahịa',
     trend: 'Omume',
     loc: 'Ebe',
-    settings: 'Ntọala'
+    settings: 'Ntọala',
+    limit_reached: 'I ruru oke n\'efu taa. Kwalite na AgriBoost Pro maka ohere na-akparaghị ókè.',
+    scan_limit: 'Nyocha Ihe Ọkụkụ Kwa Ụbọchị',
+    chat_limit: 'Mkparịta ụka AI Kwa Ụbọchị'
   }
 };
 
 /* AI INITIALIZATION - Groq */
+/* AI INITIALIZATION - Groq */
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
+/* STRIPE CONFIG */
+const STRIPE_LINK = import.meta.env.VITE_STRIPE_PAYMENT_LINK || ""; // e.g. https://buy.stripe.com/test_...
+
 
 const callGroqAI = async (prompt) => {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -560,7 +576,7 @@ const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
   </div>
 )
 
-const Diagnosis = ({ setView, notify, t, lang }) => {
+const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -581,6 +597,9 @@ const Diagnosis = ({ setView, notify, t, lang }) => {
 
   /* Combined Analysis Function for both Camera and Upload */
   const analyzeImageBase64 = async (base64Data) => {
+    // Check Daily Limit
+    if (!checkUsage('scan')) return;
+
     if (!GROQ_API_KEY) {
       notify("AI API Key Missing. Using simulated analysis.", "warn");
       simulateAnalysis();
@@ -897,7 +916,7 @@ const MarketPrices = ({ t }) => {
   )
 }
 
-const AIAdvisor = ({ location, t, lang }) => {
+const AIAdvisor = ({ location, t, lang, checkUsage }) => {
   const [messages, setMessages] = useState([
     { role: 'ai', content: `Hello! I have calibrated my data for ${location.city || 'your region'}. How can I assist your farm today?` }
     // ... (rest of AI advisor) logic is updated in next chunk or assumed same
@@ -912,6 +931,10 @@ const AIAdvisor = ({ location, t, lang }) => {
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
+
+    // Check Daily Limit
+    if (!checkUsage('chat')) return;
+
     const userMsg = input;
     setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
     setInput('');
@@ -1400,9 +1423,27 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
   )
 }
 
-const Subscription = ({ isPro, setIsPro, notify, t }) => {
+const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
   const handleUpgrade = () => {
-    notify("Redirecting to Stripe Express...", "info");
+    if (!STRIPE_LINK) {
+      notify("Stripe Link missing in .env", "error");
+      return;
+    }
+    notify("Redirecting to Stripe Secure Checkout...", "info");
+
+    // Append client_reference_id to track which user is paying (supported by Stripe Payment Links)
+    // Also append prefilled_email if available
+    const separator = STRIPE_LINK.includes('?') ? '&' : '?';
+    const checkoutUrl = `${STRIPE_LINK}${separator}client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
+
+    setTimeout(() => {
+      window.location.href = checkoutUrl;
+    }, 1500);
+  }
+
+  // Handle "Simulated" upgrade for when no Stripe link is present in DEV
+  const handleSimulatedUpgrade = () => {
+    notify("Simulating Upgrade (Dev Mode)...", "info");
     setTimeout(() => {
       setIsPro(true);
       notify("AgriBoost Pro Activated!", "success");
@@ -1419,7 +1460,8 @@ const Subscription = ({ isPro, setIsPro, notify, t }) => {
           <div className="badge badge-outline" style={{ marginBottom: '1rem' }}>FREE</div>
           <h2>Basic Farmer</h2>
           <ul style={{ listStyle: 'none', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <li>✅ 3 AI Crop Scans / month</li>
+            <li>✅ {t.scan_limit}: <b>{usage?.scans || 0} / 1</b> used</li>
+            <li>✅ {t.chat_limit}: <b>{usage?.chats || 0} / 5</b> used</li>
             <li>✅ Daily Market Price feed</li>
             <li>✅ Basic AI Advice</li>
             <li style={{ opacity: 0.4 }}>❌ Satellite Field Boundary Mapping</li>
@@ -1439,8 +1481,8 @@ const Subscription = ({ isPro, setIsPro, notify, t }) => {
             <li>✅ Priority AI Agricultural Model</li>
             <li>✅ Offline SMS Intelligence</li>
           </ul>
-          <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={handleUpgrade} disabled={isPro}>
-            {isPro ? 'Managed by Stripe' : 'Start Monthly Subscription'}
+          <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={STRIPE_LINK ? handleUpgrade : handleSimulatedUpgrade} disabled={isPro}>
+            {isPro ? 'Manage Subscription' : 'Subscribe via Stripe'}
           </button>
         </div>
       </div>
@@ -1599,9 +1641,60 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
   )
 }
 
+const SuccessPage = ({ setView }) => {
+  useEffect(() => {
+    // Fire confetti logic or sound here if desired
+  }, []);
+
+  return (
+    <div className="animate-fade" style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '80vh',
+      textAlign: 'center'
+    }}>
+      <div style={{ fontSize: '5rem', marginBottom: '1rem', animation: 'bounce 2s infinite' }}>🎉</div>
+      <h1 style={{ fontSize: '2.5rem', color: 'var(--primary-glow)', marginBottom: '0.5rem' }}>Full Access Unlocked!</h1>
+      <p style={{ fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 2rem', lineHeight: '1.6' }}>
+        You are now an <b>AgriBoost Pro</b> member. Your support helps us bring AI to every farm in Nigeria.
+      </p>
+
+      <div className="glass card" style={{ padding: '2rem', textAlign: 'left', display: 'inline-block', minWidth: '300px' }}>
+        <h3>Your Pro Benefits:</h3>
+        <ul style={{ listStyle: 'none', padding: 0, marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          <li>✅ Unlimited AI Crop Scans</li>
+          <li>✅ Priority Agronomist Chat</li>
+          <li>✅ Satellite Field Mapping</li>
+          <li>✅ 15-Day Weather Forecasts</li>
+        </ul>
+      </div>
+
+      <button
+        className="btn btn-primary"
+        style={{ marginTop: '3rem', padding: '1rem 3rem', fontSize: '1.2rem' }}
+        onClick={() => setView('dashboard')}
+      >
+        Go to Dashboard
+      </button>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+          40% {transform: translateY(-20px);}
+          60% {transform: translateY(-10px);}
+        }
+      `}</style>
+    </div>
+  )
+}
+
 function App() {
   const [view, setView] = useState('dashboard')
   const [isMenuOpen, setMenuOpen] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+
   const [location, setLocation] = useState({ lat: null, lon: null, city: '' })
 
   const { notification, notify } = useNotify()
@@ -1634,6 +1727,56 @@ function App() {
   useEffect(() => {
     localStorage.setItem('agriboost_isPro', isPro);
   }, [isPro]);
+
+  /* Usage Limits State (Daily Reset) */
+  const [usage, setUsage] = useState(() => {
+    const saved = localStorage.getItem('agriboost_usage');
+    try {
+      const parsed = JSON.parse(saved);
+      // Basic schema validation
+      if (parsed && parsed.date && typeof parsed.chats === 'number') return parsed;
+    } catch (e) { /* ignore */ }
+    return { date: new Date().toDateString(), chats: 0, scans: 0 };
+  });
+
+  useEffect(() => {
+    const today = new Date().toDateString();
+    if (usage.date !== today) {
+      // Daily Reset
+      const newUsage = { date: today, chats: 0, scans: 0 };
+      setUsage(newUsage);
+      localStorage.setItem('agriboost_usage', JSON.stringify(newUsage));
+    } else {
+      localStorage.setItem('agriboost_usage', JSON.stringify(usage));
+    }
+  }, [usage]);
+
+  /* Limit Checker */
+  const checkUsage = (type) => {
+    if (isPro) return true;
+
+    // Limits: 5 Chats, 1 Scan per day
+    const limits = { chat: 5, scan: 1 };
+
+    if (type === 'chat' && usage.chats >= limits.chat) {
+      notify(t.limit_reached, "info");
+      setView('subscription');
+      return false;
+    }
+    if (type === 'scan' && usage.scans >= limits.scan) {
+      notify(t.limit_reached, "info");
+      setView('subscription');
+      return false;
+    }
+
+    // Increment Usage if allowed
+    setUsage(prev => ({
+      ...prev,
+      chats: type === 'chat' ? prev.chats + 1 : prev.chats,
+      scans: type === 'scan' ? prev.scans + 1 : prev.scans
+    }));
+    return true;
+  };
 
   const [weather, setWeather] = useState({ temp: '--', condition: 'Fetching...', humidity: '--' })
   const [recentActivity, setRecentActivity] = useState([
@@ -1713,6 +1856,40 @@ function App() {
     }
   };
 
+
+  /* Payment Success Handler */
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('payment') === 'success') {
+      const activatePro = async () => {
+        if (!user || !user.id) return;
+
+        notify("Payment Verified! Activating Pro...", "success");
+        setIsPro(true);
+
+        // Persist to Supabase
+        // Note: checking session is safer
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.from('profiles').upsert({
+            id: session.user.id,
+            is_pro: true,
+            updated_at: new Date()
+          });
+        }
+
+        // Show Success View
+        setShowSuccess(true);
+        setView('success'); // virtual view
+
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      };
+
+      activatePro();
+    }
+  }, [user.id]); // Run when user is loaded
+
   useEffect(() => {
     /* REAL GEOLOCATION & WEATHER & CITY */
     if (navigator.geolocation) {
@@ -1790,14 +1967,15 @@ function App() {
               </button>
             </header>
 
-            {view === 'dashboard' && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
-            {view === 'identity' && <FarmerIdentity isPro={isPro} location={location} setLocation={setLocation} user={user} setUser={setUser} t={t} />}
-            {view === 'diagnosis' && <Diagnosis setView={setView} notify={notify} t={t} lang={lang} />}
-            {view === 'market' && <MarketPrices t={t} />}
-            {view === 'advisory' && <AIAdvisor location={location} t={t} lang={lang} />}
-            {view === 'ussd' && <USSDPreview location={location} t={t} />}
-            {view === 'settings' && <Settings user={user} setUser={setUser} t={t} lang={lang} setLang={setLang} notify={notify} />}
-            {view === 'subscription' && <Subscription isPro={isPro} setIsPro={setIsPro} notify={notify} t={t} />}
+            {view === 'dashboard' && !showSuccess && <Dashboard recentActivity={recentActivity} weather={weather} location={location} user={user} setView={setView} t={t} />}
+            {showSuccess && <SuccessPage setView={(v) => { setShowSuccess(false); setView(v); }} />}
+            {view === 'identity' && !showSuccess && <FarmerIdentity isPro={isPro} location={location} setLocation={setLocation} user={user} setUser={setUser} t={t} />}
+            {view === 'diagnosis' && !showSuccess && <Diagnosis setView={setView} notify={notify} t={t} lang={lang} checkUsage={checkUsage} />}
+            {view === 'market' && !showSuccess && <MarketPrices t={t} />}
+            {view === 'advisory' && !showSuccess && <AIAdvisor location={location} t={t} lang={lang} checkUsage={checkUsage} />}
+            {view === 'ussd' && !showSuccess && <USSDPreview location={location} t={t} />}
+            {view === 'settings' && !showSuccess && <Settings user={user} setUser={setUser} t={t} lang={lang} setLang={setLang} notify={notify} />}
+            {view === 'subscription' && !showSuccess && <Subscription isPro={isPro} setIsPro={setIsPro} notify={notify} t={t} usage={usage} user={user} />}
           </main>
         </>
       )}
