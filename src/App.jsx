@@ -969,7 +969,7 @@ const AIAdvisor = ({ location, t, lang, checkUsage }) => {
       // or just prepend system prompt to the API call array.
       const apiMessages = [
         { role: "system", content: systemPrompt },
-        ...messages.map(m => ({ role: m.role, content: m.content })), // History
+        ...messages.map(m => ({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content })), // Map 'ai' -> 'assistant'
         { role: "user", content: userMsg } // Current Message
       ];
 
