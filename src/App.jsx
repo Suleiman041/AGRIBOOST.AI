@@ -1911,7 +1911,12 @@ function App() {
 
   // Load Usage from Supabase when user logs in
   useEffect(() => {
-    if (!user || !user.id || user.name === 'Guest Farmer') return;
+    if (!user || !user.id || user.name === 'Guest Farmer') {
+      setUsageLoaded(true); // Guests don't need sync
+      return;
+    }
+
+    setUsageLoaded(false); // Reset loading state for new user
 
     const loadUsage = async () => {
       const today = new Date().toDateString();
@@ -1966,6 +1971,13 @@ function App() {
   /* Limit Checker */
   const checkUsage = (type) => {
     if (isPro) return true;
+
+    // Critical Fix: Prevent "Refresh Bypass" exploit
+    // If we have a user but usage isn't synced yet, block action
+    if (user.id && !usageLoaded) {
+      notify("Syncing your usage limits... Please wait a second.", "info");
+      return false;
+    }
 
     // Limits: 5 Chats, 1 Scan per day
     const limits = { chat: 5, scan: 1 };
