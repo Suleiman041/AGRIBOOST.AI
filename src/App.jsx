@@ -1946,13 +1946,19 @@ function App() {
           .single();
 
         if (data) {
-          setUser(prev => ({ ...prev, name: data.full_name || session.user.email, id: session.user.id, email: session.user.email }));
+          setUser(prev => ({
+            ...prev,
+            name: data.full_name || session.user.email,
+            id: session.user.id,
+            email: session.user.email,
+            image: data.image || null  // Load image from Supabase
+          }));
           if (data.language) setLang(data.language);
           // Set Pro from DB, defaulting to false if undefined
           setIsPro(!!data.is_pro);
         } else {
           // Init profile if new
-          setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url }));
+          setUser(prev => ({ ...prev, name: session.user.user_metadata.full_name || 'Farmer', id: session.user.id, email: session.user.email, image: session.user.user_metadata.avatar_url || null }));
           setIsPro(false);
         }
       }
