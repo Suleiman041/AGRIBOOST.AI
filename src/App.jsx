@@ -1850,42 +1850,63 @@ function App() {
   /* Sync Pro state with User state */
   const [isPro, setIsPro] = useState(false);
 
-  /* Usage Limits State (Daily Reset) - Scope to User ID */
+  /* Usage Limits State (Daily Reset) - Synced with Supabase */
   const [usage, setUsage] = useState({ date: new Date().toDateString(), chats: 0, scans: 0 });
+  const [usageLoaded, setUsageLoaded] = useState(false);
 
-  // Load/Save Usage per User
+  // Load Usage from Supabase when user logs in
   useEffect(() => {
-    if (!user || user.name === 'Guest Farmer') return;
+    if (!user || !user.id || user.name === 'Guest Farmer') return;
 
-    const key = `agriboost_usage_${user.id}`;
-    const saved = localStorage.getItem(key);
-    const today = new Date().toDateString();
+    const loadUsage = async () => {
+      const today = new Date().toDateString();
 
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.date !== today) {
-          // Reset for new day
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('usage_date, usage_chats, usage_scans')
+        .eq('id', user.id)
+        .single();
+
+      if (data) {
+        // Check if it's a new day - reset if so
+        if (data.usage_date !== today) {
           const newUsage = { date: today, chats: 0, scans: 0 };
           setUsage(newUsage);
-          localStorage.setItem(key, JSON.stringify(newUsage));
+          // Save reset to DB
+          await supabase.from('profiles').upsert({
+            id: user.id,
+            usage_date: today,
+            usage_chats: 0,
+            usage_scans: 0
+          });
         } else {
-          setUsage(parsed);
+          setUsage({
+            date: data.usage_date || today,
+            chats: data.usage_chats || 0,
+            scans: data.usage_scans || 0
+          });
         }
-      } catch (e) {
+      } else {
+        // No usage data yet, initialize
         setUsage({ date: today, chats: 0, scans: 0 });
       }
-    } else {
-      setUsage({ date: today, chats: 0, scans: 0 });
-    }
-  }, [user.id]); // Reload when user changes
+      setUsageLoaded(true);
+    };
 
-  // Persist usage change
-  useEffect(() => {
-    if (user.id) {
-      localStorage.setItem(`agriboost_usage_${user.id}`, JSON.stringify(usage));
-    }
-  }, [usage, user.id]);
+    loadUsage();
+  }, [user.id]);
+
+  // Save Usage to Supabase when it changes
+  const saveUsageToSupabase = async (newUsage) => {
+    if (!user || !user.id) return;
+
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      usage_date: newUsage.date,
+      usage_chats: newUsage.chats,
+      usage_scans: newUsage.scans
+    });
+  };
 
   /* Limit Checker */
   const checkUsage = (type) => {
@@ -1906,11 +1927,13 @@ function App() {
     }
 
     // Increment Usage if allowed
-    setUsage(prev => ({
-      ...prev,
-      chats: type === 'chat' ? prev.chats + 1 : prev.chats,
-      scans: type === 'scan' ? prev.scans + 1 : prev.scans
-    }));
+    const newUsage = {
+      ...usage,
+      chats: type === 'chat' ? usage.chats + 1 : usage.chats,
+      scans: type === 'scan' ? usage.scans + 1 : usage.scans
+    };
+    setUsage(newUsage);
+    saveUsageToSupabase(newUsage); // Sync to cloud
     return true;
   };
 
