@@ -615,11 +615,25 @@ const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
 
     setAnalyzing(true);
     try {
-      // Call Groq Vision AI (Llama 3.2 Vision)
-      const prompt = `You are an expert plant pathologist. Analyze this plant image. Identify any disease, pest, or deficiency. 
-      Return ONLY valid JSON: {"disease": "Name", "severity": "Low/Moderate/High", "recommendation": "Specific concise remedy", "confidence": "e.g. 92%"} 
-      If healthy, say "Healthy Crop".
-      Translate all text (disease, recommendation, etc.) to ${lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English'}.`;
+      // Determine target language name
+      const targetLang = lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English';
+
+      // Call Groq Vision AI (Llama 4 Scout)
+      const prompt = `You are an expert agricultural plant pathologist analyzing a crop image.
+
+TASK: Identify any disease, pest damage, or nutrient deficiency visible in this plant image.
+
+OUTPUT FORMAT: Return ONLY a valid JSON object with these exact keys:
+{
+  "disease": "Disease name in ${targetLang}",
+  "severity": "Low OR Moderate OR High",
+  "recommendation": "Treatment advice in ${targetLang} (2-3 sentences)",
+  "confidence": "XX%"
+}
+
+If the plant looks healthy, set disease to "Healthy Crop" (translated to ${targetLang}).
+IMPORTANT: All text values MUST be in ${targetLang} language.
+Return ONLY the JSON, no other text.`;
 
       const responseText = await callGroqVisionAI(prompt, base64Data);
       console.log("AI Vision Response:", responseText);
@@ -631,20 +645,32 @@ const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
         return;
       }
 
-      // Clean JSON string (handle backticks)
-      const cleanJson = responseText.replace(/```json|```/g, '').trim();
+      // Clean JSON string (handle backticks and extra text)
+      let cleanJson = responseText.replace(/```json|```/g, '').trim();
 
-      // Try parsing, fallback to text if model fails to output strict JSON
+      // Try to extract JSON if there's extra text around it
+      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanJson = jsonMatch[0];
+      }
+
+      // Try parsing
       try {
         const aiResult = JSON.parse(cleanJson);
-        setResult(aiResult);
+        // Validate the result has expected fields
+        if (aiResult.disease && aiResult.recommendation) {
+          setResult(aiResult);
+        } else {
+          throw new Error("Missing fields");
+        }
       } catch (e) {
-        // Fallback if model chatted instead of JSON
+        // Fallback: Try to show meaningful content even if JSON failed
+        console.warn("JSON parse failed, using fallback:", e);
         setResult({
-          disease: "Analysis Complete",
+          disease: lang === 'ha' ? "An gano matsala" : lang === 'yo' ? "A ti rii iṣoro" : lang === 'ig' ? "Achọpụtara nsogbu" : "Issue Detected",
           severity: "Check Details",
-          recommendation: cleanJson.substring(0, 150) + "...",
-          confidence: "Check Text"
+          recommendation: responseText.length > 300 ? responseText.substring(0, 300) + "..." : responseText,
+          confidence: "Review Needed"
         });
       }
     } catch (err) {
