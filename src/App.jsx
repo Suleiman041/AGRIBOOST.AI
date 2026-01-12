@@ -1574,7 +1574,7 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
         <div className="glass card pro-card" style={{ padding: '2rem' }}>
           <div className="badge" style={{ background: '#fff', color: '#000', marginBottom: '1rem' }}>PRO</div>
           <h2>AgriBoost Pro</h2>
-          <div className="stat-value" style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>₦2,500 <span style={{ fontSize: '1rem' }}>/ month</span></div>
+          <div className="stat-value" style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>₦3,000 <span style={{ fontSize: '1rem' }}>/ month</span></div>
           <ul style={{ listStyle: 'none', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', color: '#fff' }}>
             <li>✅ <b>Unlimited</b> AI Crop Scans</li>
             <li>✅ <b>Unlimited</b> AI Advisor Chats</li>
