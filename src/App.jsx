@@ -1912,45 +1912,55 @@ function App() {
   // Load Usage from Supabase when user logs in
   useEffect(() => {
     if (!user || !user.id || user.name === 'Guest Farmer') {
-      setUsageLoaded(true); // Guests don't need sync
+      setUsageLoaded(true);
       return;
     }
 
-    setUsageLoaded(false); // Reset loading state for new user
+    setUsageLoaded(false);
 
     const loadUsage = async () => {
       const today = new Date().toDateString();
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('usage_date, usage_chats, usage_scans')
-        .eq('id', user.id)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('usage_date, usage_chats, usage_scans')
+          .eq('id', user.id)
+          .single();
 
-      if (data) {
-        // Check if it's a new day - reset if so
-        if (data.usage_date !== today) {
-          const newUsage = { date: today, chats: 0, scans: 0 };
-          setUsage(newUsage);
-          // Save reset to DB
-          await supabase.from('profiles').upsert({
-            id: user.id,
-            usage_date: today,
-            usage_chats: 0,
-            usage_scans: 0
-          });
-        } else {
-          setUsage({
-            date: data.usage_date || today,
-            chats: data.usage_chats || 0,
-            scans: data.usage_scans || 0
-          });
+        if (error) {
+          console.warn("Usage load error (likely missing columns):", error.message);
+          // If columns are missing, we can't sync, but let's not block the user
+          setUsage({ date: today, chats: 0, scans: 0 });
+          setUsageLoaded(true);
+          return;
         }
-      } else {
-        // No usage data yet, initialize
-        setUsage({ date: today, chats: 0, scans: 0 });
+
+        if (data) {
+          if (data.usage_date !== today) {
+            const newUsage = { date: today, chats: 0, scans: 0 };
+            setUsage(newUsage);
+            await supabase.from('profiles').upsert({
+              id: user.id,
+              usage_date: today,
+              usage_chats: 0,
+              usage_scans: 0
+            });
+          } else {
+            setUsage({
+              date: data.usage_date || today,
+              chats: data.usage_chats || 0,
+              scans: data.usage_scans || 0
+            });
+          }
+        } else {
+          setUsage({ date: today, chats: 0, scans: 0 });
+        }
+      } catch (err) {
+        console.error("Usage sync failed:", err);
+      } finally {
+        setUsageLoaded(true);
       }
-      setUsageLoaded(true);
     };
 
     loadUsage();
@@ -1958,14 +1968,20 @@ function App() {
 
   // Save Usage to Supabase when it changes
   const saveUsageToSupabase = async (newUsage) => {
-    if (!user || !user.id) return;
+    if (!user || !user.id || user.name === 'Guest Farmer') return;
 
-    await supabase.from('profiles').upsert({
+    const { error } = await supabase.from('profiles').upsert({
       id: user.id,
       usage_date: newUsage.date,
       usage_chats: newUsage.chats,
       usage_scans: newUsage.scans
     });
+
+    if (error) {
+      console.error("Failed to sync usage to cloud:", error.message);
+      // Fallback to local storage if DB fails
+      localStorage.setItem(`agriboost_usage_fallback_${user.id}`, JSON.stringify(newUsage));
+    }
   };
 
   /* Limit Checker */
