@@ -1656,6 +1656,40 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
     }
   };
 
+  /* Upload Custom Image */
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      notify("Image too large. Max 2MB.", "warn");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result;
+
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, image: base64String, updated_at: new Date() });
+
+        if (updateError) throw updateError;
+
+        setUser(prev => ({ ...prev, image: base64String }));
+        notify("Custom avatar uploaded!", "success");
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error(error);
+      notify("Upload failed.", "danger");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateProfile = async () => {
     setLoading(true);
     try {
@@ -1707,8 +1741,8 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
 
         {/* Avatar Selection Grid */}
         <div style={{ marginBottom: '2rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', color: '#ccc' }}>Choose Avatar</label>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <label style={{ display: 'block', marginBottom: '0.8rem', color: '#ccc' }}>Profile Photo</label>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {AVATARS.map((url, i) => (
               <div
                 key={i}
@@ -1729,6 +1763,27 @@ const Settings = ({ user, setUser, t, lang, setLang, notify }) => {
                 <img src={url} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
               </div>
             ))}
+
+            {/* Custom Upload Button */}
+            <label style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              border: '2px dashed #444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.5rem',
+              background: 'rgba(255,255,255,0.05)',
+              transition: 'all 0.2s'
+            }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--primary-glow)'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = '#444'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+            >
+              <Plus size={24} />
+              <input type="file" accept="image/*" onChange={handleFileUpload} style={{ display: 'none' }} />
+            </label>
           </div>
         </div>
 
