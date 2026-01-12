@@ -230,36 +230,43 @@ const callGroqAI = async (messages) => {
 };
 
 const callGroqVisionAI = async (text, base64Image) => {
-  // Llama 3.2 Vision Preview on Groq
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "llama-3.2-11b-vision-preview",
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: text },
-            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
-          ]
-        }
-      ],
-      max_tokens: 500,
-      temperature: 0.1
-    }),
-  });
+  // Llama 4 Scout Vision on Groq (latest model per docs)
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-4-scout-17b-16e-instruct", // Updated to Llama 4 Scout
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: text },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+            ]
+          }
+        ],
+        max_completion_tokens: 1024,
+        temperature: 1,
+        top_p: 1
+      }),
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || `HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = await response.json();
+      console.warn("Groq Vision API Error:", error); // Log for debugging
+      return "Error: Model unavailable";
+    }
+
+    const result = await response.json();
+    return result.choices[0]?.message?.content || "No response received";
+  } catch (err) {
+    console.error("Vision API Network Error:", err);
+    return "Error: Connection failed";
   }
-
-  const result = await response.json();
-  return result.choices[0]?.message?.content || "No response received";
 };
 
 /* AUTH COMPONENT - EMAIL/PASSWORD ONLY */
@@ -616,6 +623,13 @@ const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
 
       const responseText = await callGroqVisionAI(prompt, base64Data);
       console.log("AI Vision Response:", responseText);
+
+      // Check if the Vision API returned an error
+      if (responseText.startsWith("Error:")) {
+        notify("AI Vision unavailable. Using simulator.", "warn");
+        simulateAnalysis();
+        return;
+      }
 
       // Clean JSON string (handle backticks)
       const cleanJson = responseText.replace(/```json|```/g, '').trim();
@@ -1539,36 +1553,38 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
   return (
     <div className="animate-fade">
       <h1>{t.sub}</h1>
-      <p>Real Stripe-integrated monthly payment portal.</p>
+      <p>Unlock unlimited AI-powered farming tools.</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '2rem' }} className="diagnosis-grid">
         <div className="glass card" style={{ padding: '2rem', opacity: isPro ? 0.6 : 1, border: !isPro ? '2px solid var(--primary-glow)' : '1px solid var(--glass-border)' }}>
           <div className="badge badge-outline" style={{ marginBottom: '1rem' }}>FREE</div>
           <h2>Basic Farmer</h2>
+          <div className="stat-value" style={{ fontSize: '1.5rem', margin: '0.5rem 0' }}>₦0</div>
           <ul style={{ listStyle: 'none', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <li>✅ {t.scan_limit}: <b>{usage?.scans || 0} / 1</b> used</li>
-            <li>✅ {t.chat_limit}: <b>{usage?.chats || 0} / 5</b> used</li>
-            <li>✅ Daily Market Price feed</li>
-            <li>✅ Basic AI Advice</li>
-            <li style={{ opacity: 0.4 }}>❌ Satellite Field Boundary Mapping</li>
-            <li style={{ opacity: 0.4 }}>❌ Gemini 1.5 Pro Access</li>
+            <li>✅ {t.scan_limit}: <b>{usage?.scans || 0} / 1</b> per day</li>
+            <li>✅ {t.chat_limit}: <b>{usage?.chats || 0} / 5</b> per day</li>
+            <li>✅ Daily Market Price Feed</li>
+            <li>✅ Live Agri-News Updates</li>
+            <li style={{ opacity: 0.4 }}>❌ Unlimited AI Access</li>
+            <li style={{ opacity: 0.4 }}>❌ Priority Support</li>
           </ul>
           {!isPro && <button className="btn btn-outline" style={{ marginTop: '2rem', width: '100%' }} disabled>Current Plan</button>}
         </div>
 
         <div className="glass card pro-card" style={{ padding: '2rem' }}>
-          <div className="badge" style={{ background: '#fff', color: '#000', marginBottom: '1rem' }}>PREMIUM</div>
+          <div className="badge" style={{ background: '#fff', color: '#000', marginBottom: '1rem' }}>PRO</div>
           <h2>AgriBoost Pro</h2>
           <div className="stat-value" style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>₦2,500 <span style={{ fontSize: '1rem' }}>/ month</span></div>
           <ul style={{ listStyle: 'none', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', color: '#fff' }}>
-            <li>✅ Unlimited Real-time Scans</li>
-            <li>✅ Sub-meter GPS Field Mapping</li>
-            <li>✅ Satellite Telemetry Dashboard</li>
-            <li>✅ Priority AI Agricultural Model</li>
-            <li>✅ Offline SMS Intelligence</li>
+            <li>✅ <b>Unlimited</b> AI Crop Scans</li>
+            <li>✅ <b>Unlimited</b> AI Advisor Chats</li>
+            <li>✅ No Daily Limits</li>
+            <li>✅ Priority AI Response</li>
+            <li>✅ Full Market Price Access</li>
+            <li>✅ Priority Email Support</li>
           </ul>
           <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={STRIPE_LINK ? handleUpgrade : handleSimulatedUpgrade} disabled={isPro}>
-            {isPro ? 'Manage Subscription' : 'Subscribe via Stripe'}
+            {isPro ? '✓ You are Pro!' : 'Upgrade Now'}
           </button>
         </div>
       </div>
