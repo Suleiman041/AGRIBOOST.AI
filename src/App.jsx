@@ -629,22 +629,14 @@ const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
       // Determine target language name
       const targetLang = lang === 'ha' ? 'Hausa' : lang === 'yo' ? 'Yoruba' : lang === 'ig' ? 'Igbo' : 'English';
 
-      // Call Groq Vision AI (Llama 4 Scout)
-      const prompt = `You are an expert agricultural plant pathologist analyzing a crop image.
-
-TASK: Identify any disease, pest damage, or nutrient deficiency visible in this plant image.
-
-OUTPUT FORMAT: Return ONLY a valid JSON object with these exact keys:
-{
-  "disease": "Disease name in ${targetLang}",
-  "severity": "Low OR Moderate OR High",
-  "recommendation": "Treatment advice in ${targetLang} (2-3 sentences)",
-  "confidence": "XX%"
-}
-
-If the plant looks healthy, set disease to "Healthy Crop" (translated to ${targetLang}).
-IMPORTANT: All text values MUST be in ${targetLang} language.
-Return ONLY the JSON, no other text.`;
+      const prompt = `You are an expert agricultural plant pathologist analyzing a plant image. Identfy disease/pests. 
+      Output ONLY JSON: {
+        "disease": "Disease name in ${targetLang}", 
+        "severity": "Low/Moderate/High", 
+        "recommendation": "Brief diagnosis in ${targetLang}", 
+        "products": ["Product/Action 1", "Product/Action 2"],
+        "confidence": "XX%"
+      }. Language for text: ${targetLang}.`;
 
       const responseText = await callGroqVisionAI(prompt, base64Data);
       console.log("AI Vision Response:", responseText);
@@ -707,6 +699,7 @@ Return ONLY the JSON, no other text.`;
         disease: 'Early Blight Detected',
         confidence: '89%',
         recommendation: 'Increase soil drainage and apply copper-based fungicide. Remove infected lower leaves.',
+        products: ['Copper Oxide (Fungicide)', 'Mancozeb', 'Liquid Seaweed Extract'],
         severity: 'Moderate'
       });
     }, 2000);
@@ -779,7 +772,17 @@ Return ONLY the JSON, no other text.`;
               <div style={{ marginTop: '0.5rem', color: '#fff', fontSize: '0.95rem', lineHeight: '1.6' }}>
                 <ReactMarkdown>{result.recommendation}</ReactMarkdown>
               </div>
-              <button className="btn btn-primary" style={{ marginTop: '2rem', width: '100%' }} onClick={() => setView('market')}>Check Local Pesticide Prices</button>
+
+              {result.products && result.products.length > 0 && (
+                <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                  <h5 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary-glow)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Recommended Products/Meds</h5>
+                  <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.9rem' }}>
+                    {result.products.map((p, idx) => (
+                      <li key={idx} style={{ marginBottom: '0.3rem' }}>{p}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -922,17 +925,25 @@ const MarketPrices = ({ t }) => {
 }
 
 const AIAdvisor = ({ location, t, lang, checkUsage }) => {
-  const [messages, setMessages] = useState([
-    { role: 'ai', content: `Hello! I have calibrated my data for ${location.city || 'your region'}. How can I assist your farm today?` }
-    // ... (rest of AI advisor) logic is updated in next chunk or assumed same
+  const [messages, setMessages] = useState(() => {
+    // Load from localStorage on init
+    const saved = localStorage.getItem('agriboost_chat_history');
+    return saved ? JSON.parse(saved) : [
+      { role: 'ai', content: `Hello! I have calibrated my data for ${location.city || 'your region'}. How can I assist your farm today?` }
+    ];
+  });
 
-  ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef(null);
 
+  // Save to localStorage when messages change
+  useEffect(() => {
+    localStorage.setItem('agriboost_chat_history', JSON.stringify(messages));
+    scrollToBottom();
+  }, [messages]);
+
   const scrollToBottom = () => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  useEffect(() => scrollToBottom(), [messages]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
