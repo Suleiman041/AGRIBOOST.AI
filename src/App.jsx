@@ -202,7 +202,8 @@ const translations = {
 /* AI INITIALIZATION - Groq */
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 /* PAYSTACK CONFIG */
-const PAYSTACK_LINK = import.meta.env.VITE_PAYSTACK_PAYMENT_LINK || ""; // e.g. https://paystack.com/pay/...
+const PAYSTACK_LINK = import.meta.env.VITE_PAYSTACK_PAYMENT_LINK || "";
+const PAYSTACK_PUB_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
 
 
 const callGroqAI = async (messages) => {
@@ -1551,20 +1552,53 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
 
 const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
   const handleUpgrade = () => {
-    if (!PAYSTACK_LINK) {
-      notify("Paystack Link missing in .env", "error");
+    // 1. Check for Inline Pop-up first (Best Experience)
+    if (PAYSTACK_PUB_KEY) {
+      const handler = window.PaystackPop.setup({
+        key: PAYSTACK_PUB_KEY,
+        email: user.email,
+        amount: 3000 * 100, // ₦3,000 in kobo
+        currency: "NGN",
+        callback: (response) => {
+          // This runs on successful payment
+          notify("Payment Successful! Reference: " + response.reference, "success");
+
+          // Trigger the activation logic instantly
+          const activatePro = async () => {
+            setIsPro(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              await supabase.from('profiles').upsert({
+                id: session.user.id,
+                is_pro: true,
+                updated_at: new Date()
+              });
+            }
+            setShowSuccess(true);
+            setView('success');
+          };
+          activatePro();
+        },
+        onClose: () => {
+          notify("Payment window closed.", "info");
+        }
+      });
+      handler.openIframe();
       return;
     }
-    notify("Redirecting to Paystack Secure Checkout...", "info");
 
-    // Paystack Payment Pages accept 'email' and 'metadata' as query params
-    const separator = PAYSTACK_LINK.includes('?') ? '&' : '?';
-    // We send email to pre-fill the form, and a reference for tracking if needed
-    const checkoutUrl = `${PAYSTACK_LINK}${separator}email=${encodeURIComponent(user.email)}`;
+    // 2. Fallback to Redirect Link if Public Key is missing
+    if (PAYSTACK_LINK) {
+      notify("Redirecting to Paystack Secure Checkout...", "info");
+      const separator = PAYSTACK_LINK.includes('?') ? '&' : '?';
+      const checkoutUrl = `${PAYSTACK_LINK}${separator}email=${encodeURIComponent(user.email)}`;
+      setTimeout(() => {
+        window.location.href = checkoutUrl;
+      }, 1500);
+      return;
+    }
 
-    setTimeout(() => {
-      window.location.href = checkoutUrl;
-    }, 1500);
+    notify("Paystack configuration missing in .env", "error");
   }
 
   // Handle "Simulated" upgrade for when no Paystack link is present in DEV
