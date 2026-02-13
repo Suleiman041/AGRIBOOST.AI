@@ -202,8 +202,8 @@ const translations = {
 /* AI INITIALIZATION - Groq */
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
 /* PAYSTACK CONFIG */
-const PAYSTACK_LINK = import.meta.env.VITE_PAYSTACK_PAYMENT_LINK || "";
-const PAYSTACK_PUB_KEY = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "";
+const PAYSTACK_LINK = (import.meta.env.VITE_PAYSTACK_PAYMENT_LINK || "").trim();
+const PAYSTACK_PUB_KEY = (import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || "").trim();
 
 
 const callGroqAI = async (messages) => {
@@ -1554,9 +1554,13 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
   const handleUpgrade = () => {
     // 1. Check for Inline Pop-up first (Best Experience)
     if (PAYSTACK_PUB_KEY) {
+      if (!user?.email) {
+        notify("User email missing. Please log in again.", "error");
+        return;
+      }
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUB_KEY,
-        email: user.email,
+        email: user.email.trim(),
         amount: 3000 * 100, // ₦3,000 in kobo
         currency: "NGN",
         callback: (response) => {
@@ -1643,7 +1647,7 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
             <li>✅ Full Market Price Access</li>
             <li>✅ Priority Email Support</li>
           </ul>
-          <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={PAYSTACK_LINK ? handleUpgrade : handleSimulatedUpgrade} disabled={isPro}>
+          <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={(PAYSTACK_LINK || PAYSTACK_PUB_KEY) ? handleUpgrade : handleSimulatedUpgrade} disabled={isPro}>
             {isPro ? '✓ You are Pro!' : 'Upgrade Now'}
           </button>
         </div>
