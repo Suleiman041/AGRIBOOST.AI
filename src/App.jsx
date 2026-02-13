@@ -201,8 +201,8 @@ const translations = {
 /* AI INITIALIZATION - Groq */
 /* AI INITIALIZATION - Groq */
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
-/* STRIPE CONFIG */
-const STRIPE_LINK = import.meta.env.VITE_STRIPE_PAYMENT_LINK || ""; // e.g. https://buy.stripe.com/test_...
+/* PAYSTACK CONFIG */
+const PAYSTACK_LINK = import.meta.env.VITE_PAYSTACK_PAYMENT_LINK || ""; // e.g. https://paystack.com/pay/...
 
 
 const callGroqAI = async (messages) => {
@@ -1551,23 +1551,23 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
 
 const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
   const handleUpgrade = () => {
-    if (!STRIPE_LINK) {
-      notify("Stripe Link missing in .env", "error");
+    if (!PAYSTACK_LINK) {
+      notify("Paystack Link missing in .env", "error");
       return;
     }
-    notify("Redirecting to Stripe Secure Checkout...", "info");
+    notify("Redirecting to Paystack Secure Checkout...", "info");
 
-    // Append client_reference_id to track which user is paying (supported by Stripe Payment Links)
-    // Also append prefilled_email if available
-    const separator = STRIPE_LINK.includes('?') ? '&' : '?';
-    const checkoutUrl = `${STRIPE_LINK}${separator}client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
+    // Paystack Payment Pages accept 'email' and 'metadata' as query params
+    const separator = PAYSTACK_LINK.includes('?') ? '&' : '?';
+    // We send email to pre-fill the form, and a reference for tracking if needed
+    const checkoutUrl = `${PAYSTACK_LINK}${separator}email=${encodeURIComponent(user.email)}`;
 
     setTimeout(() => {
       window.location.href = checkoutUrl;
     }, 1500);
   }
 
-  // Handle "Simulated" upgrade for when no Stripe link is present in DEV
+  // Handle "Simulated" upgrade for when no Paystack link is present in DEV
   const handleSimulatedUpgrade = () => {
     notify("Simulating Upgrade (Dev Mode)...", "info");
     setTimeout(() => {
@@ -1609,7 +1609,7 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
             <li>✅ Full Market Price Access</li>
             <li>✅ Priority Email Support</li>
           </ul>
-          <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={STRIPE_LINK ? handleUpgrade : handleSimulatedUpgrade} disabled={isPro}>
+          <button className="btn" style={{ marginTop: '2rem', width: '100%', background: '#fff', color: '#000' }} onClick={PAYSTACK_LINK ? handleUpgrade : handleSimulatedUpgrade} disabled={isPro}>
             {isPro ? '✓ You are Pro!' : 'Upgrade Now'}
           </button>
         </div>
