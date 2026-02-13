@@ -586,8 +586,21 @@ const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
 
 const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
   const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(() => {
+    const saved = localStorage.getItem('agriboost_last_scan');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [previewPresent, setPreviewPresent] = useState(false);
+
+  // Persist result
+  useEffect(() => {
+    if (result) {
+      localStorage.setItem('agriboost_last_scan', JSON.stringify(result));
+    } else {
+      localStorage.removeItem('agriboost_last_scan');
+    }
+  }, [result]);
+
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -1359,26 +1372,36 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
   return (
     <div className="animate-fade">
       <h1>{t.location}</h1>
-      <p>Using on-device Geolocation API for real-time farm mapping.</p>
-      <div className="glass card identity-grid" style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'minmax(150px, auto) 1fr minmax(200px, auto)', gap: '2rem', padding: '2rem', alignItems: 'center' }}>
+      <p style={{ textAlign: 'center' }}>Using on-device Geolocation API for real-time farm mapping.</p>
+
+      <div className="glass card" style={{
+        marginTop: '2rem',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '2rem',
+        padding: '3rem 2rem',
+        textAlign: 'center'
+      }}>
 
         {/* Profile Image Section */}
-        <div style={{ position: 'relative', width: '150px', height: '150px' }}>
+        <div style={{ position: 'relative', width: '180px', height: '180px' }}>
           <div style={{
             width: '100%',
             height: '100%',
             borderRadius: '50%',
             background: '#111',
             overflow: 'hidden',
-            border: '2px solid var(--primary-glow)',
+            border: '3px solid var(--primary-glow)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(74, 222, 128, 0.2)'
           }}>
             {user.image ? (
               <img src={user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Profile" />
             ) : (
-              <span style={{ fontSize: '4rem', opacity: 0.5 }}>👤</span>
+              <span style={{ fontSize: '5rem', opacity: 0.5 }}>👤</span>
             )}
           </div>
           <button
@@ -1386,19 +1409,20 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
             className="btn-icon"
             style={{
               position: 'absolute',
-              bottom: '0',
-              right: '0',
+              bottom: '5px',
+              right: '5px',
               background: 'var(--primary-glow)',
               borderRadius: '50%',
-              width: '40px',
-              height: '40px',
+              width: '45px',
+              height: '45px',
               border: 'none',
               color: '#000',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
+              boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+              zIndex: 2
             }}
           >
             ✏️
@@ -1413,33 +1437,40 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
         </div>
 
         {/* User Info Section */}
-        <div>
-          <label style={{ fontSize: '0.8rem', color: '#888' }}>FARMER NAME</label>
+        <div style={{ width: '100%', maxWidth: '500px' }}>
+          <label style={{ fontSize: '0.8rem', color: '#888', letterSpacing: '1.5px' }}>FARMER IDENTITY</label>
           <input
             value={user.name}
             onChange={(e) => handleNameChange(e.target.value)}
+            placeholder="Enter Farmer Name"
             style={{
               background: 'transparent',
               border: 'none',
-              borderBottom: '1px solid #444',
+              borderBottom: '2px solid rgba(74, 222, 128, 0.3)',
               color: '#fff',
-              fontSize: '1.5rem',
+              fontSize: '2rem',
               fontWeight: 'bold',
               width: '100%',
-              marginBottom: '0.5rem',
-              padding: '0.2rem 0'
+              marginBottom: '1.5rem',
+              padding: '0.5rem 0',
+              textAlign: 'center',
+              outline: 'none'
             }}
           />
 
-          <p>Verified City: <span style={{ color: 'var(--primary-glow)' }}>{location.city || user.city}</span></p>
-          <p>Active Lat: <span style={{ color: '#fff' }}>{location.lat ? location.lat.toFixed(6) : 'Fetching...'}</span></p>
-          <p>Active Lon: <span style={{ color: '#fff' }}>{location.lon ? location.lon.toFixed(6) : 'Fetching...'}</span></p>
-          <p style={{ marginTop: '1rem', color: 'var(--primary-glow)', fontWeight: 800 }}>LIVE GPS SYNC: {location.lat ? 'ACTIVE' : 'SEARCHING'}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '1.1rem' }}>
+            <p>📍 <span style={{ color: '#888' }}>City:</span> <span style={{ color: 'var(--primary-glow)', fontWeight: 'bold' }}>{location.city || user.city}</span></p>
+            <p>🛰️ <span style={{ color: '#888' }}>Lat:</span> <span style={{ color: '#fff' }}>{location.lat ? location.lat.toFixed(6) : 'Fetching...'}</span></p>
+            <p>🛰️ <span style={{ color: '#888' }}>Lon:</span> <span style={{ color: '#fff' }}>{location.lon ? location.lon.toFixed(6) : 'Fetching...'}</span></p>
+            <p style={{ marginTop: '1rem', color: 'var(--primary-glow)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
+              {location.lat ? '🟢 GPS Sync Active' : '🟡 Searching for Satellite...'}
+            </p>
+          </div>
         </div>
 
-        {/* Stats Section with Map */}
-        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="badge badge-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', alignSelf: 'flex-end', cursor: 'pointer' }} onClick={() => {
+        {/* Manual Update Row */}
+        <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '2rem', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+          <button className="btn btn-outline" style={{ gap: '0.5rem' }} onClick={() => {
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition((pos) => {
                 const { latitude, longitude } = pos.coords;
@@ -1450,26 +1481,26 @@ const FarmerIdentity = ({ isPro, location, setLocation, user, setUser, t }) => {
               });
             }
           }}>
-            📍 Auto-Locate
-          </div>
+            📍 Refresh GPS Location
+          </button>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-            <p style={{ fontSize: '0.7rem', color: '#aaa' }}>Manual Coordinates</p>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <p style={{ fontSize: '0.8rem', color: '#aaa' }}>Manual Coordinate Entry</p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
               <input
-                placeholder="Lat"
+                placeholder="Latitude"
                 value={manualLat}
                 onChange={(e) => setManualLat(e.target.value)}
-                style={{ width: '90px', background: '#222', border: '1px solid #444', color: '#fff', padding: '0.4rem', borderRadius: '6px' }}
+                style={{ width: '130px', background: 'rgba(0,0,0,0.3)', border: '1px solid #444', color: '#fff', padding: '0.6rem', borderRadius: '8px', textAlign: 'center' }}
               />
               <input
-                placeholder="Lon"
+                placeholder="Longitude"
                 value={manualLon}
                 onChange={(e) => setManualLon(e.target.value)}
-                style={{ width: '90px', background: '#222', border: '1px solid #444', color: '#fff', padding: '0.4rem', borderRadius: '6px' }}
+                style={{ width: '130px', background: 'rgba(0,0,0,0.3)', border: '1px solid #444', color: '#fff', padding: '0.6rem', borderRadius: '8px', textAlign: 'center' }}
               />
             </div>
-            <button onClick={handleManualUpdate} className="btn-sm" style={{ background: 'var(--primary-glow)', color: '#000', border: 'none', borderRadius: '6px', padding: '0.3rem 0.8rem', cursor: 'pointer', fontSize: '0.8rem' }}>Set Farm Location</button>
+            <button onClick={handleManualUpdate} className="btn btn-primary" style={{ padding: '0.6rem 2rem' }}>Set Farm Coordinates</button>
           </div>
         </div>
       </div>
