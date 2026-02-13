@@ -587,20 +587,30 @@ const Dashboard = ({ recentActivity, weather, location, user, setView, t }) => (
 const Diagnosis = ({ setView, notify, t, lang, checkUsage }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
-  const [cameraActive, setCameraActive] = useState(false);
-  const videoRef = useRef(null);
+  const [previewPresent, setPreviewPresent] = useState(false);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setCameraActive(true);
+  const handleImageFile = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const aspect = img.width / img.height;
+        canvas.width = 800;
+        canvas.height = 800 / aspect;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setPreviewPresent(true);
+        setResult(null);
+        analyzeImageBase64(ev.target.result.split(',')[1]);
       }
-    } catch (err) {
-      notify("Cannot access camera. Please check permissions.", "warn");
-    }
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   /* Combined Analysis Function for both Camera and Upload */
@@ -708,106 +718,55 @@ Return ONLY the JSON, no other text.`;
       <p>{t.scan_desc}</p>
 
       <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) 1fr', gap: '2rem' }} className="diagnosis-grid">
-        <div className="glass card" style={{ height: '450px', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="glass card" style={{ height: '450px', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
 
-          {/* Main Action Buttons (Camera or Upload) */}
-          {!cameraActive && !result && !analyzing && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-              <div onClick={startCamera} style={{ textAlign: 'center', cursor: 'pointer', padding: '1rem', border: '1px dashed var(--primary-glow)', borderRadius: '12px' }}>
+          {/* Hidden Inputs */}
+          <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} style={{ display: 'none' }} onChange={(e) => handleImageFile(e.target.files[0])} />
+          <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={(e) => handleImageFile(e.target.files[0])} />
+
+          {/* Initial State: Choose Image */}
+          {!previewPresent && !analyzing && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', zIndex: 10 }}>
+              <div onClick={() => cameraInputRef.current.click()} style={{ textAlign: 'center', cursor: 'pointer', padding: '1.5rem', border: '2px dashed var(--primary-glow)', borderRadius: '16px', background: 'rgba(255,255,255,0.05)', width: '200px' }}>
                 <span style={{ fontSize: '3rem' }}>📸</span>
-                <p>Use Camera</p>
+                <p style={{ fontWeight: 'bold', marginTop: '0.5rem' }}>Take Photo</p>
               </div>
-              <p>- OR -</p>
-              <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
-                📁 Upload from Gallery
-                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
-                  if (e.target.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                      const img = new Image();
-                      img.onload = () => {
-                        const canvas = canvasRef.current;
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        canvas.getContext('2d').drawImage(img, 0, 0);
-                        // Simulate capture flow from here
-                        setCameraActive(false);
-                        setResult(null); // clear prev
-                        // We can auto-analyze or show preview. Let's show preview in canvas naturally.
-                        // But for simplicity of logic reuse, we'll just trigger analyze immediately or set 'preview' state.
-                        // To keep it simple, we'll store the base64 and show it, adding a 'Analyze' button overlay.
-                        // Actually, reusing the 'result' view for preview is tricky. Let's just create a quick 'previewMode'.
-                      }
-                      img.src = ev.target.result;
-                      // Trigger analysis immediately on upload for ease
-                      analyzeImageBase64(ev.target.result.split(',')[1]);
-                    };
-                    reader.readAsDataURL(e.target.files[0]);
-                  }
-                }} />
-              </label>
+              <p style={{ opacity: 0.6 }}>- OR -</p>
+              <button className="btn btn-outline" onClick={() => fileInputRef.current.click()}>
+                📁 From Gallery
+              </button>
             </div>
           )}
 
-          {cameraActive && (
-            <>
-              <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <button onClick={() => {
-                const canvas = canvasRef.current;
-                const video = videoRef.current;
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-
-                // Stop camera
-                video.srcObject.getTracks().forEach(track => track.stop());
-                setCameraActive(false);
-
-                analyzeImageBase64(imageData.split(',')[1]);
-              }} className="btn btn-primary" style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)' }}>Capture & Analyze</button>
-            </>
-          )}
-
+          {/* Analysis View Overlay */}
           {analyzing && (
-            <div style={{ textAlign: 'center', zIndex: 10 }}>
+            <div style={{ textAlign: 'center', zIndex: 10, background: 'rgba(0,0,0,0.5)', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div className="floating" style={{ fontSize: '5rem' }}>🔍</div>
-              <p style={{ marginTop: '1rem' }}>AI Vision is analyzing leaf tissue...</p>
+              <p style={{ marginTop: '1rem', fontWeight: 'bold' }}>AI Vision Analyzing...</p>
               <div style={{ width: '200px', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '1rem', overflow: 'hidden' }}>
                 <div style={{ height: '100%', background: 'var(--primary-glow)', animation: 'slide 2s infinite linear' }}></div>
               </div>
             </div>
           )}
 
-          {/* Show Canvas (Image Preview) always if we have content, but hide if empty to show buttons */}
-          <canvas ref={canvasRef} style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            zIndex: (analyzing || result || (!cameraActive && !result && !analyzing)) ? 1 : -1,
-            display: (cameraActive || (!result && !analyzing && !cameraActive)) ? 'none' : 'block' // hide canvas when camera is active or initial state
-          }} />
-
-          {/* Correction: The canvas logic above is a bit messy. Let's simplify: 
-              Canvas holds the captured/uploaded image. It should be visible when NOT cameraActive and NOT initial state.
-          */}
+          {/* Image Preview Canvas */}
           <canvas ref={canvasRef} style={{
             width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0,
-            display: (result || analyzing) ? 'block' : 'none'
+            display: previewPresent ? 'block' : 'none', opacity: analyzing ? 0.3 : 1
           }} />
 
+          {/* Action Overlay */}
           {result && !analyzing && (
-            <button onClick={() => { setResult(null); setCameraActive(false); }} className="btn btn-outline" style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', zIndex: 5, background: 'rgba(0,0,0,0.8)' }}>Scan Another</button>
+            <button onClick={() => { setPreviewPresent(false); setResult(null); }} className="btn btn-outline" style={{ position: 'absolute', bottom: '1rem', left: '50%', transform: 'translateX(-50%)', zIndex: 15, background: 'rgba(0,0,0,0.8)', border: '1px solid #fff' }}>
+              Scan Another
+            </button>
           )}
         </div>
 
         <div className="glass card" style={{ padding: '2rem' }}>
           <h3>Analysis Report</h3>
-          {!result && !analyzing && <p style={{ marginTop: '2rem' }}>Awaiting camera capture...</p>}
-          {analyzing && <p style={{ marginTop: '2rem' }}>Neural network diagnostic in progress...</p>}
+          {!result && !analyzing && <p style={{ marginTop: '2rem', opacity: 0.6 }}>Awaiting image of crop leaf...</p>}
+          {analyzing && <p style={{ marginTop: '2rem' }}>Consulting artificial intelligence...</p>}
           {result && (
             <div style={{ marginTop: '1rem' }} className="animate-fade">
               <div className={`badge ${result.severity === 'High' ? 'badge-danger' : 'badge-warning'}`} style={{ marginBottom: '1rem' }}>Severity: {result.severity}</div>
@@ -825,7 +784,6 @@ Return ONLY the JSON, no other text.`;
           )}
         </div>
       </div>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
       <style>{`@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(100%); } }`}</style>
     </div>
   )
@@ -1565,40 +1523,41 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
 
       console.log("Initiating Paystack with Key:", PAYSTACK_PUB_KEY.substring(0, 10) + "...");
 
-      const handler = window.PaystackPop.setup({
-        key: PAYSTACK_PUB_KEY,
-        email: user.email.trim(),
-        amount: 3000 * 100, // ₦3,000 in kobo
-        currency: "NGN",
-        callback: (response) => {
-          // This runs on successful payment
-          notify("Payment Successful! Reference: " + response.reference, "success");
-
-          // Trigger the activation logic instantly
-          const activatePro = async () => {
-            setIsPro(true);
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-              await supabase.from('profiles').upsert({
-                id: session.user.id,
-                is_pro: true,
-                updated_at: new Date()
-              });
-            }
-            setShowSuccess(true);
-            setView('success');
-          };
-          activatePro();
-        },
-        onClose: () => {
-          notify("Payment window closed.", "info");
-        }
-      });
-      handler.openIframe();
-      return;
+      try {
+        const handler = window.PaystackPop.setup({
+          key: PAYSTACK_PUB_KEY,
+          email: user.email.trim(),
+          amount: 3000 * 100, // ₦3,000 in kobo
+          currency: "NGN",
+          callback: (response) => {
+            notify("Payment Successful! Reference: " + response.reference, "success");
+            const activatePro = async () => {
+              setIsPro(true);
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session) {
+                await supabase.from('profiles').upsert({
+                  id: session.user.id,
+                  is_pro: true,
+                  updated_at: new Date()
+                });
+              }
+              setShowSuccess(true);
+              setView('success');
+            };
+            activatePro();
+          },
+          onClose: () => {
+            notify("Payment window closed.", "info");
+          }
+        });
+        handler.openIframe();
+        return;
+      } catch (err) {
+        console.error("Paystack Inline failed:", err);
+      }
     }
 
-    // 2. Fallback to Redirect Link if Public Key is missing
+    // 2. Fallback to Redirect Link (Most Reliable for Live Mode)
     if (PAYSTACK_LINK) {
       notify("Redirecting to Paystack Secure Checkout...", "info");
       const separator = PAYSTACK_LINK.includes('?') ? '&' : '?';
