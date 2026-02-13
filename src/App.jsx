@@ -1554,10 +1554,17 @@ const Subscription = ({ isPro, setIsPro, notify, t, usage, user }) => {
   const handleUpgrade = () => {
     // 1. Check for Inline Pop-up first (Best Experience)
     if (PAYSTACK_PUB_KEY) {
-      if (!user?.email) {
-        notify("User email missing. Please log in again.", "error");
+      if (!window.PaystackPop) {
+        notify("Paystack library not loaded. Check your internet or index.html.", "error");
         return;
       }
+      if (!user?.email || !user.email.includes('@')) {
+        notify("A valid email is required to pay. Please update your profile.", "danger");
+        return;
+      }
+
+      console.log("Initiating Paystack with Key:", PAYSTACK_PUB_KEY.substring(0, 10) + "...");
+
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUB_KEY,
         email: user.email.trim(),
